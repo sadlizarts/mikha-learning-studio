@@ -151,14 +151,17 @@ async function save(p, chapterId, status, missing, body) {
     draft = { body: '', chapterId: '', files: new Map(), filename: '' };
     renderLessons(body);
   } catch (e) {
-    toast(/stem_hash|unique|duplicate/i.test(e.message) ? 'A quick-check question has the same text as a practice question in this chapter. Change its wording.' : e.message, 5000);
+    toast(/stem_hash/i.test(e.message) ? 'A quick-check question has the same text as a practice question in this chapter. Change its wording.' : e.message, 6000);
     b1.disabled = b2.disabled = false; label.textContent = old;
   }
 }
 
 async function showHistory(lessonId, chapterId, body, cat) {
   let vers;
-  try { vers = await admin.lessonVersions(lessonId); } catch (e) { toast(e.message); return; }
+  try {
+    const cur = (await admin.lessons()).find(l => l.id === lessonId);
+    vers = (await admin.lessonVersions(lessonId)).filter(v => !cur || v.version < cur.version);
+  } catch (e) { toast(e.message); return; }
   if (!vers.length) { toast('No older versions yet.'); return; }
   const pick = await sheet({
     title: 'Older versions',
