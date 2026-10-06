@@ -104,7 +104,7 @@
 
   <!-- RESULT (also used read-only for History detail) -->
   <section class="screen" id="s-result" aria-label="Result">
-    <div class="top" id="result-top" hidden><button class="back" data-nav="#/history" aria-label="Back">‹</button><h2>Practice</h2></div>
+    <div class="top" id="result-top" hidden><button class="back" id="result-back" aria-label="Back">‹</button><h2>Practice</h2></div>
     <div class="scroll no-tab" id="result-body"></div>
   </section>
 
@@ -122,6 +122,19 @@
   <section class="screen" id="s-progress" aria-label="Progress">
     <div class="top"><h2>Progress</h2></div>
     <div class="scroll" id="progress-body"></div>
+  </section>
+
+  <!-- ADMIN (Phase 3) — dense, no mascot, no hard shadows (DESIGN §5.8) -->
+  <section class="screen admin" id="s-admin" aria-label="Admin">
+    <div class="top"><button class="back" data-nav="#/home" aria-label="Back to Home">‹</button><h2>Admin</h2></div>
+    <nav class="atabs" id="atabs" aria-label="Admin sections">
+      <button data-nav="#/admin/import" data-a="import">Import</button>
+      <button data-nav="#/admin/questions" data-a="questions">Questions</button>
+      <button data-nav="#/admin/review" data-a="review">Needs review</button>
+      <button data-nav="#/admin/student" data-a="student">Student</button>
+      <button data-nav="#/admin/goals" data-a="goals">Goals</button>
+    </nav>
+    <div class="scroll no-tab" id="admin-body"></div>
   </section>
 
   <!-- tab bar -->
