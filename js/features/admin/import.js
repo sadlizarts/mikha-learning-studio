@@ -120,6 +120,8 @@ async function check(cat) {
   staged = [];
   const hashesByChapter = {};
   const seen = new Set();
+  let anchorsBy = {};
+  try { anchorsBy = await admin.lessonAnchors(); } catch { /* FR-59 check skipped */ }
   for (const b of batches) {
     const chapterId = forced || matchChapter(cat, b.subject, b.chapter);
     for (const raw of (b.questions || [])) {
@@ -132,6 +134,8 @@ async function check(cat) {
       }
       if (chapterId && hashesByChapter[chapterId].has(hash)) E.push('duplicate: already in this chapter');
       if (seen.has(chapterId + hash)) E.push('duplicate inside this file');
+      if (q.lesson_anchor && chapterId && !(anchorsBy[chapterId] || []).includes(q.lesson_anchor))
+        W.push(anchorsBy[chapterId] ? `lesson_anchor "${q.lesson_anchor}" is not in this chapter's lesson (no Read link)` : `lesson_anchor "${q.lesson_anchor}" set, but this chapter has no lesson yet`);
       seen.add(chapterId + hash);
       staged.push({ q, errors: E, warnings: W, include: !E.length, hash, chapterId });
     }

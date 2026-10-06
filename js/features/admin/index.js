@@ -7,8 +7,9 @@ import { renderQuestions } from './questions.js';
 import { renderReview } from './review.js';
 import { renderStudent } from './student.js';
 import { renderGoals } from './goals.js';
+import { renderLessons } from './lessons.js';
 
-const TABS = { import: renderImport, questions: renderQuestions, review: renderReview, student: renderStudent, goals: renderGoals };
+const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, goals: renderGoals };
 
 export async function renderAdmin(tab = 'import') {
   if (app.profile?.role !== 'admin') { navigate('#/home', { replace: true }); return; }

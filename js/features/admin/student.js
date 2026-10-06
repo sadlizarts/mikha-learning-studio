@@ -1,21 +1,9 @@
 // Admin → Student dashboard (FR-60, FR-62).
-import { $, $$, esc, fmtNum, fmtDur, levelInfo, jakartaDate, shortDay, scoreCls } from '../../ui.js';
+import { $, $$, esc, fmtNum, fmtDur, levelInfo, jakartaDate, shortDay, scoreCls, trendSVG } from '../../ui.js';
 import { admin } from '../../store.js';
 import { catalog, chapterIndex } from '../../state.js';
 import { chapterLabel, qTags, openEditor } from './common.js';
 import { chaptersLabel } from '../home.js';
-
-function trendSVG(scores, threshold) {
-  if (scores.length < 2) return '<p class="note">The trend appears after 2 finished practices.</p>';
-  const W = 520, H = 120, P = 8, n = scores.length;
-  const x = (i) => P + i * (W - 2 * P) / (n - 1), y = (s) => H - P - s * (H - 2 * P) / 100;
-  const pts = scores.map((s, i) => `${x(i).toFixed(1)},${y(s).toFixed(1)}`).join(' ');
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Last ${n} scores: ${scores.join(', ')}">
-    <line x1="${P}" x2="${W - P}" y1="${y(threshold)}" y2="${y(threshold)}" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="5 5"/>
-    <polygon points="${x(0)},${H - P} ${pts} ${x(n - 1)},${H - P}" fill="var(--ember)" opacity=".12"/>
-    <polyline points="${pts}" fill="none" stroke="var(--ember)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${x(n - 1)}" cy="${y(scores[n - 1])}" r="5" fill="var(--volt)" stroke="var(--ink)" stroke-width="2"/></svg>`;
-}
 
 export async function renderStudent(body) {
   body.innerHTML = '<div class="spin"></div>';
@@ -23,7 +11,7 @@ export async function renderStudent(body) {
   const students = await admin.students();
   if (!students.length) { body.innerHTML = '<div class="panel sunk empty">No student account yet.</div>'; return; }
   const st = students[0];
-  const [att, prog, cstats, missed] = await Promise.all([admin.studentAttempts(st.id, 80), admin.studentProgress(st.id), admin.studentChapterStats(st.id), admin.mostMissed({ limit: 10 })]);
+  const [att, prog, cstats, missed, lreads] = await Promise.all([admin.studentAttempts(st.id, 80), admin.studentProgress(st.id), admin.studentChapterStats(st.id), admin.mostMissed({ limit: 10 }), admin.lessonReads(st.id).catch(() => [])]);
   const R = cat.rules || {}; const NEEDS = +R.needs_work_threshold || 70, MIN = +R.min_answered || 15;
   const done = att.filter(a => a.status === 'completed');
   const today = jakartaDate(); const weekAgo = Date.now() - 7 * 86400000;
@@ -51,6 +39,12 @@ export async function renderStudent(body) {
         <td>${esc(chapterLabel(idx, c.chapter_id))} ${c.answered >= MIN && c.accuracy_recent < NEEDS ? '<span class="tag bad">Needs work</span>' : ''}</td>
         <td class="r num" style="color:${c.accuracy_recent < NEEDS ? 'var(--bad)' : 'var(--ok)'};font-weight:900">${c.accuracy_recent}%</td>
         <td class="r num">${c.hint_rate_recent}%</td><td class="r num">${c.answered}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No answers yet.</p>'}
+    </div>
+    <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Lessons read</div>
+      ${lreads.length ? `<table class="tbl"><thead><tr><th>Chapter</th><th class="r">Quick check</th><th class="r">Reads</th><th>Last</th></tr></thead><tbody>${lreads.map(r => `<tr>
+        <td>${esc(chapterLabel(idx, r.chapter_id))}</td>
+        <td class="r num">${r.quick_check_total ? `${r.quick_check_score}/${r.quick_check_total}` : '—'}</td>
+        <td class="r num">${r.read_count}</td><td class="num">${esc(shortDay(r.last_read_at))}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No lesson finished yet.</p>'}
     </div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Sessions</div>
       ${att.length ? `<table class="tbl"><thead><tr><th>When</th><th>Chapters</th><th class="r">Score</th><th class="r">Time</th></tr></thead><tbody>${att.map(a => `<tr data-s="${a.id}" style="cursor:pointer">
