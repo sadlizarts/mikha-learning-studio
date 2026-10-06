@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mikha Learning Studio</title>
+<meta name="description" content="Practice questions, lessons and progress for Mikha.">
+<meta name="theme-color" content="#FAF6EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14121F" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MLS">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/lilita-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/nunito-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<div id="app">
+  <div class="offline" id="offline" hidden>You're offline — connect to start a practice.</div>
+
+  <section class="screen active" id="s-boot" aria-busy="true">
+    <div class="loading"><div><div class="spin" style="margin:0 auto 12px"></div>Opening the studio…</div></div>
+  </section>
+
+  <!-- LOGIN -->
+  <section class="screen" id="s-login" aria-label="Sign in">
+    <div class="halftone"></div>
+    <div class="scroll no-tab">
+      <form class="hero-login" id="loginform" novalidate>
+        <div class="mascot" id="m-login"></div>
+        <h1 class="wordmark">Mikha<span>Learning Studio</span></h1>
+        <p class="note" style="max-width:300px;color:var(--ink-2);font-size:15px">Pick your chapters, fight 30 questions, level up. Every answer teaches you something.</p>
+        <div class="stack" style="width:100%;max-width:360px">
+          <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
+          <div class="field"><label for="pw">Password</label><input id="pw" name="password" type="password" autocomplete="current-password" required></div>
+          <div class="formerr" id="loginerr" role="alert"></div>
+          <button class="btn primary lg block" id="loginbtn" type="submit">Enter the Studio</button>
+          <p class="note">Your login is remembered on this device.</p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- HOME -->
+  <section class="screen" id="s-home" aria-label="Home"><div class="scroll" id="home-body"></div></section>
+
+  <!-- PICK -->
+  <section class="screen" id="s-pick" aria-label="Pick chapters">
+    <div class="top"><button class="back" data-nav="#/home" aria-label="Back">‹</button><h2>Pick chapters</h2></div>
+    <div class="scroll no-tab" style="padding-bottom:190px">
+      <div class="stack">
+        <div class="subtabs" id="subtabs" role="tablist" aria-label="Subjects"></div>
+        <div class="stack" id="chaplist" style="gap:10px"></div>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <div class="panel" style="padding:12px">
+        <div class="warnline" id="pickwarn" hidden></div>
+        <div class="row between" style="margin-bottom:10px">
+          <div class="grow"><div class="eyebrow">Session length</div><div class="note num" id="pickmeta">0 chapters · 0 questions available</div></div>
+          <div class="lenbar" role="radiogroup" aria-label="Session length"><button class="len on" data-len="30" role="radio" aria-checked="true">30</button><button class="len" data-len="50" role="radio" aria-checked="false">50</button></div>
+        </div>
+        <button class="btn primary lg block" id="startbtn" disabled>Pick at least one chapter</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="screen" id="s-quiz" aria-label="Practice">
+    <div class="qtop">
+      <button class="back" id="quitbtn" aria-label="Leave practice">×</button>
+      <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0" id="progwrap"><i id="progbar"></i></div>
+      <div class="qcount num" id="qcount">1 / 30</div>
+    </div>
+    <div class="combo" id="combo" hidden></div>
+    <div class="scroll no-tab" id="qscroll">
+      <div class="stack" id="qstack">
+        <div class="row" style="gap:8px"><span class="chip" id="qchip"><span class="dot"></span><span class="txt"></span></span></div>
+        <div class="panel sunk ctx" id="ctx" hidden></div>
+        <div class="panel qcard">
+          <div class="stem" id="stem"></div>
+          <button class="qimg" id="qimg" hidden aria-label="Open picture"></button>
+        </div>
+        <div class="opts" id="opts"></div>
+        <button class="hintbtn" id="hintbtn" hidden></button>
+        <div id="hints" class="stack" style="gap:8px"></div>
+        <div id="feedback" class="stack" hidden aria-live="polite">
+          <div class="verdict"><div class="mascot" id="m-quiz"></div><div class="impact" id="impact"></div></div>
+          <div class="panel explain" id="explain"><div class="eyebrow" id="explain-h">Why</div><p id="exptext"></p></div>
+          <div class="syncnote" id="syncnote" hidden>Saved on this device — it will sync when you're back online.</div>
+          <button class="btn primary lg block" id="nextbtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT (also used read-only for History detail) -->
+  <section class="screen" id="s-result" aria-label="Result">
+    <div class="top" id="result-top" hidden><button class="back" data-nav="#/history" aria-label="Back">‹</button><h2>Practice</h2></div>
+    <div class="scroll no-tab" id="result-body"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="screen" id="s-history" aria-label="History">
+    <div class="top"><h2>History</h2></div>
+    <div class="scroll"><div class="recent" id="historylist"></div></div>
+  </section>
+
+  <!-- LEARN / PROGRESS (next phases) -->
+  <section class="screen" id="s-learn" aria-label="Learn">
+    <div class="top"><h2>Learn</h2></div>
+    <div class="scroll"><div class="panel sunk soon"><div class="row"><div class="mascot sm" data-mascot="think"></div><div class="grow"><b style="color:var(--ink)">Lessons are on the way.</b><p class="note" style="margin-top:4px">Science Unit 2 is written. The reading pages arrive in the next update.</p></div></div></div></div>
+  </section>
+  <section class="screen" id="s-progress" aria-label="Progress">
+    <div class="top"><h2>Progress</h2></div>
+    <div class="scroll" id="progress-body"></div>
+  </section>
+
+  <!-- tab bar -->
+  <nav class="tabbar" id="tabbar" hidden aria-label="Main">
+    <button class="tab" data-nav="#/home" data-tab="home"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/></svg></span>Home</button>
+    <button class="tab" data-nav="#/learn" data-tab="learn"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z M20 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg></span>Learn</button>
+    <button class="tab" data-nav="#/progress" data-tab="progress"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></span>Progress</button>
+    <button class="tab" data-nav="#/history" data-tab="history"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>History</button>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<noscript><p style="padding:24px;font-family:sans-serif">Mikha Learning Studio needs JavaScript turned on.</p></noscript>
+</body>
+</html>
