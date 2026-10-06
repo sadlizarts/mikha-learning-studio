@@ -341,3 +341,12 @@ html.wide #app{max-width:980px}
 .split{display:grid;gap:12px}
 html.wide .split{grid-template-columns:1fr 1fr}
 @media (max-width:820px){html.wide .split{grid-template-columns:1fr}}
+
+/* lesson pages (v1.3.0) */
+.toc .tocrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--card);font-weight:800;color:var(--ink);font-size:15px}
+.toc .tocrow .n{width:28px;height:28px;flex:none;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-size:13px;background:var(--paper-2)}
+.ptitle{font-size:24px;color:var(--ink);line-height:1.2}
+.pgnav{display:flex;gap:10px;flex-wrap:wrap}
+.pgnav .btn{flex:1;min-width:140px;min-height:52px;font-size:15px;padding:8px 14px;line-height:1.25;text-align:center}
+.lesson code{white-space:normal}
+.lol{list-style:decimal}
