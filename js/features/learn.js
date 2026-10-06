@@ -1,8 +1,9 @@
 // Learn (PRD FR-73..FR-75, DESIGN §4.7b, §4.8b, §5.6b, §5.6c).
-// #/learn → subject tabs + lesson rows; #/lesson/<chapterId>[/<anchor>] → full lesson;
-// openLessonSheet() shows the same lesson over the quiz/result (92 % bottom sheet) without leaving it.
+// #/learn → subject tabs + lesson rows; #/lesson/<chapterId>[/<anchor>] → lesson overview + list of pages + Quick check;
+// #/lesson/<chapterId>/p/<slug>[/<anchor>] → one reading page (converted Study Studio chapter, v1.3.0).
+// openLessonSheet() shows the lesson or the page that holds an anchor over the quiz/result (92 % bottom sheet).
 import { $, $$, esc, setMascot, subjectMeta, shortCode, toast, reducedMotion } from '../ui.js';
-import { lessonIndex, myLessonReads, loadLesson, lessonImages, completeLesson } from '../store.js';
+import { lessonIndex, myLessonReads, loadLesson, lessonImages, completeLesson, loadPage, markPage, pageForAnchor } from '../store.js';
 import { parseLesson, renderSections, inline } from '../lesson-md.js';
 import { app, catalog, chapterIndex } from '../state.js';
 import { show, navigate } from '../router.js';
@@ -47,7 +48,10 @@ export async function renderLearn() {
     const bits = [];
     if (r?.first_completed_at) bits.push('<span class="read">✓ Read</span>');
     if (isNeedsWork(st, R)) bits.push('<span class="nw">Needs work</span>');
-    bits.push(`≈ ${L.read_minutes || 6} min`);
+    const pages = L.pages || [];
+    const mins = (L.read_minutes || 0) + pages.reduce((t, p) => t + (p.read_minutes || 0), 0);
+    if (pages.length) bits.push(`<span class="num">${(r?.pages_read || []).filter(x => pages.some(p => p.slug === x)).length}/${pages.length} pages</span>`);
+    bits.push(`≈ ${mins || 6} min`);
     if (r?.quick_check_total) bits.push(`<span class="num">Quick check ${r.quick_check_score}/${r.quick_check_total}</span>`);
     return `<button class="lrow" style="--c:${m.color}" data-nav="#/lesson/${c.chapter_id}"><div class="code">${esc(shortCode(c.code))}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${bits.join(' · ')}</div></div><span aria-hidden="true" style="color:var(--ink-3);font-weight:900">›</span></button>`;
   }).join('');
@@ -68,8 +72,8 @@ export async function renderLearn() {
  */
 async function mountLesson(root, chapterId, { inSheet = false, anchor = null, onTitle = () => {} } = {}) {
   root.innerHTML = '<div class="loading" style="height:40vh"><div class="spin"></div></div>';
-  let res, cat, reads = {};
-  try { [res, cat] = await Promise.all([loadLesson(chapterId), catalog().catch(() => null)]); }
+  let res, cat, reads = {}, lidx = {};
+  try { [res, cat, lidx] = await Promise.all([loadLesson(chapterId), catalog().catch(() => null), lessonsMeta().catch(() => ({}))]); }
   catch (e) { root.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return null; }
   if (!res) { root.innerHTML = '<div class="panel sunk empty">This lesson is not published yet.</div>'; return null; }
   try { reads = await myLessonReads(app.user.id); } catch { /* optional */ }
@@ -86,6 +90,7 @@ async function mountLesson(root, chapterId, { inSheet = false, anchor = null, on
       ${res.offline ? '<span class="tdelta">Offline copy</span>' : ''}</div>
     ${p.greeting ? `<div class="row" style="align-items:flex-start;gap:12px"><div class="mascot" data-m="think"></div><div class="speech">${inline(p.greeting)}</div></div>` : ''}
     <div class="lbody">${renderSections(p)}</div>
+    ${tocHTML(chapterId, lidx[chapterId]?.pages || [], r?.pages_read || [], inSheet)}
     ${p.quick.length ? `<div class="panel qc" id="qc-${chapterId}">
       <div class="eyebrow">Quick check · no XP, just you</div>
       ${r?.quick_check_total ? `<div class="note num" style="margin-top:4px">Last quick check ${r.quick_check_score}/${r.quick_check_total}</div>` : ''}
@@ -122,6 +127,48 @@ async function mountLesson(root, chapterId, { inSheet = false, anchor = null, on
   bindQuickCheck(root, chapterId, p);
   // smooth scrolling would still be running when the pictures land, so jump instantly when there are pictures
   if (anchor) requestAnimationFrame(() => jumpTo(root, anchor, true, !p.images.length));
+  return p;
+}
+
+function tocHTML(chapterId, pages, read, inSheet) {
+  if (!pages.length) return '';
+  return `<div class="panel toc"><div class="eyebrow">Read more · ${pages.length} pages</div>
+    <div class="stack" style="gap:8px;margin-top:8px">${pages.map((pg, i) => `<button class="tocrow" ${inSheet ? `data-pg="${esc(pg.slug)}"` : `data-nav="#/lesson/${chapterId}/p/${esc(pg.slug)}"`}>
+      <span class="n num">${i + 1}</span><span class="grow">${esc(pg.title)}</span>
+      <span class="note num">${read.includes(pg.slug) ? '<span style="color:var(--ok);font-weight:900">✓</span> ' : ''}≈ ${pg.read_minutes || 5} min</span></button>`).join('')}</div></div>`;
+}
+
+/** Fill `root` with one reading page. opts: { inSheet, anchor, onTitle }. */
+async function mountPage(root, chapterId, slug, { inSheet = false, anchor = null, onTitle = () => {} } = {}) {
+  root.innerHTML = '<div class="loading" style="height:40vh"><div class="spin"></div></div>';
+  let res, cat, lidx = {};
+  try { [res, cat, lidx] = await Promise.all([loadPage(chapterId, slug), catalog().catch(() => null), lessonsMeta().catch(() => ({}))]); }
+  catch (e) { root.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return null; }
+  if (!res) { root.innerHTML = '<div class="panel sunk empty">This page is not published.</div>'; return null; }
+  const ch = cat ? chapterIndex(cat)[chapterId] : null;
+  const m = subjectMeta(ch?.subject);
+  const pages = lidx[chapterId]?.pages || [];
+  const i = pages.findIndex(pg => pg.slug === slug);
+  const prev = i > 0 ? pages[i - 1] : null, next = i >= 0 && i < pages.length - 1 ? pages[i + 1] : null;
+  const p = parseLesson(res.page.body_md, { page: true });
+  onTitle(res.page.title);
+  const link = (pg, label, cls = '') => pg === 'overview'
+    ? `<button class="btn ${cls}" ${inSheet ? 'data-pg=""' : `data-nav="#/lesson/${chapterId}"`}>${label}</button>`
+    : `<button class="btn ${cls}" ${inSheet ? `data-pg="${esc(pg.slug)}"` : `data-nav="#/lesson/${chapterId}/p/${esc(pg.slug)}"`}>${label}</button>`;
+  root.innerHTML = `<div class="stack lesson" style="gap:16px">
+    <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip" style="--c:${m.color}"><span class="dot"></span><span class="txt">${esc(m.short)} · ${esc(shortCode(ch?.code || ''))}</span></span>
+      ${i >= 0 ? `<span class="note num">Page ${i + 1} of ${pages.length}</span>` : ''}<span class="note num">≈ ${res.page.read_minutes || p.readMinutes} min</span>
+      ${res.offline ? '<span class="tdelta">Offline copy</span>' : ''}</div>
+    <h2 class="ptitle">${inline(res.page.title)}</h2>
+    <div class="lbody">${renderSections(p)}</div>
+    <div class="pgnav">${prev ? link(prev, `‹ ${esc(prev.title)}`, 'ghost') : link('overview', '‹ Overview', 'ghost')}
+      ${next ? link(next, `${esc(next.title)} ›`, 'primary') : link('overview', 'Quick check & practice ›', 'primary')}</div>
+  </div>`;
+  // the implicit first section repeats the page title: keep its anchor, drop the duplicate heading
+  const first = root.querySelector('.lbody .lsec h3');
+  if (first && first.textContent.trim() === root.querySelector('.ptitle').textContent.trim()) first.remove();
+  markPage(chapterId, slug).then(() => { lessonsCache.at = 0; });
+  if (anchor) requestAnimationFrame(() => jumpTo(root, anchor, true, true));
   return p;
 }
 
@@ -177,13 +224,18 @@ function bindQuickCheck(root, chapterId, p) {
 }
 
 /* ---------------- full-screen lesson ---------------- */
-export async function renderLesson(chapterId, anchor) {
+export async function renderLesson(chapterId, a, b, c) {
   show('lesson');
   $('#lesson-back').onclick = () => { if (history.length > 1) history.back(); else navigate('#/learn'); };
   const scroller = $('#lesson-scroll');
   scroller.scrollTop = 0;
   $('#lesson-title').textContent = 'Lesson';
-  await mountLesson($('#lesson-body'), chapterId, { anchor: anchor ? decodeURIComponent(anchor) : null, onTitle: t => { $('#lesson-title').textContent = t; } });
+  const onTitle = t => { $('#lesson-title').textContent = t; };
+  const dec = (x) => x ? decodeURIComponent(x) : null;
+  if (a === 'p' && b) { await mountPage($('#lesson-body'), chapterId, dec(b), { anchor: dec(c), onTitle }); return; }
+  // an anchor that lives on a page (e.g. a bookmarked Read link) goes to that page
+  if (a) { try { const slug = pageForAnchor((await lessonsMeta())[chapterId], dec(a)); if (slug) { navigate(`#/lesson/${chapterId}/p/${encodeURIComponent(slug)}/${a}`, { replace: true }); return; } } catch { /* fall through */ } }
+  await mountLesson($('#lesson-body'), chapterId, { anchor: dec(a), onTitle });
 }
 
 /* ---------------- bottom sheet over quiz / result ---------------- */
@@ -200,6 +252,11 @@ export function openLessonSheet(chapterId, anchor) {
   document.addEventListener('keydown', onKey, true);
   $('#app').appendChild(wrap);
   wrap.querySelector('[data-close]').focus();
-  mountLesson(wrap.querySelector('.scroll'), chapterId, { inSheet: true, anchor, onTitle: t => { wrap.querySelector('h2').textContent = t; } });
+  const sc = wrap.querySelector('.scroll');
+  const onTitle = t => { wrap.querySelector('h2').textContent = t; };
+  const open = (slug, a) => { sc.scrollTop = 0; return slug ? mountPage(sc, chapterId, slug, { inSheet: true, anchor: a, onTitle }) : mountLesson(sc, chapterId, { inSheet: true, anchor: a, onTitle }); };
+  // links inside the sheet switch pages in place (the quiz underneath stays put)
+  wrap.addEventListener('click', e => { const b = e.target.closest('[data-pg]'); if (b) { e.stopPropagation(); open(b.dataset.pg || null, null); } });
+  lessonsMeta().catch(() => ({})).then(lidx => open(pageForAnchor(lidx[chapterId], anchor), anchor));
   return close;
 }
