@@ -14,6 +14,7 @@ function countUp(el, target) {
 export async function renderResult(id, { fresh }) {
   show('result');
   $('#result-top').hidden = fresh;
+  $('#result-back').onclick = () => { if (history.length > 1) history.back(); else navigate('#/history'); };
   const body = $('#result-body');
   body.innerHTML = '<div class="loading" style="height:60vh"><div class="spin"></div></div>';
   let data, idx = {};

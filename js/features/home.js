@@ -1,6 +1,7 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
 import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast } from '../ui.js';
-import { loadProgress, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt } from '../store.js';
+import { loadProgress, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt, myGoals } from '../store.js';
+import { goalStatus } from '../goals.js';
 import { app, catalog, chapterIndex, firstName } from '../state.js';
 import { show, navigate } from '../router.js';
 
@@ -39,10 +40,10 @@ export async function renderHome() {
   show('home');
   const body = $('#home-body');
   if (!body.dataset.ready) body.innerHTML = `<div class="loading" style="height:60vh"><div><div class="spin" style="margin:0 auto 12px"></div>Loading…</div></div>`;
-  let cat, prog, inprog, done;
+  let cat, prog, inprog, done, goals;
   try {
     await abandonStale();
-    [cat, prog, inprog, done] = await Promise.all([catalog(), loadProgress(), inProgressAttempt(app.user.id), completedAttempts(app.user.id, 40)]);
+    [cat, prog, inprog, done, goals] = await Promise.all([catalog(), loadProgress(), inProgressAttempt(app.user.id), completedAttempts(app.user.id, 40), myGoals(app.user.id)]);
   } catch (e) {
     body.innerHTML = `<div class="panel sunk empty" style="margin-top:40px"><p>${esc(e.message)}</p><button class="btn block" style="margin-top:12px" data-nav="#/home">Try again ↻</button></div>`;
     return;
@@ -51,6 +52,14 @@ export async function renderHome() {
   const lv = levelInfo(prog?.xp_total || 0);
   const doneDates = new Set(done.map(a => jakartaDate(a.finished_at)));
   const streak = prog?.current_streak || 0;
+  const today = jakartaDate();
+  const ctx = { sessionsToday: done.filter(a => jakartaDate(a.finished_at) === today).length, statBy: cat.statBy,
+    chapterName: (id) => { const c = idx[id]; return c ? `${chaptersLabel([id], idx)} ${c.name}` : 'Chapter'; }, minAnswered: +cat.rules?.min_answered || 15 };
+  const missions = (goals || []).map(g => goalStatus(g, ctx)).filter(m => m.status !== 'hidden');
+  const chipFor = { done: ['Done', 'var(--ok)'], pending: ['Pending', 'var(--volt-2)'], overdue: ['Overdue', 'var(--bad)'] };
+  const mission = missions.length ? `<div class="panel mission"><div class="eyebrow">Today's mission from Dad</div>${missions.map(m =>
+    `<div class="item"><div class="grow"><div style="font-weight:900;color:var(--ink);font-size:16px">${esc(m.title)}</div><div class="note">${esc(m.detail)}</div></div>
+     <span class="chip" style="--c:${chipFor[m.status][1]}"><span class="dot"></span>${chipFor[m.status][0]}</span></div>`).join('')}</div>` : '';
 
   const resume = inprog ? `
     <div class="panel cta resume">
@@ -88,6 +97,7 @@ export async function renderHome() {
         <div class="note num" style="margin-top:6px">${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
       </div>
     </div>
+    ${mission}
     ${resume}
     ${cta}
     <div>
@@ -97,7 +107,7 @@ export async function renderHome() {
     </div>
     <div class="row between" style="margin-top:6px">
       <span class="note">Signed in as ${esc(app.profile?.display_name || '')}${app.profile?.role === 'admin' ? ' · admin' : ''}</span>
-      <button class="btn ghost small" id="signout">Sign out</button>
+      <span class="row" style="gap:8px">${app.profile?.role === 'admin' ? '<button class="btn ghost small" data-nav="#/admin/import">Admin</button>' : ''}<button class="btn ghost small" id="signout">Sign out</button></span>
     </div>
   </div>`;
   body.dataset.ready = '1';
