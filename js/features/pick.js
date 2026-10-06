@@ -92,10 +92,16 @@ async function start() {
   }
 }
 
-export async function renderPick() {
+/** #/pick/<chapterId> (from Learn / Progress) preselects just that chapter */
+export async function renderPick(preset) {
   show('pick');
   $('#chaplist').innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
   try { cat = await catalog(true); } catch (e) { $('#chaplist').innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
+  if (preset && cat.chapters.some(c => c.chapter_id === preset && avail(c))) {
+    sel.clear(); sel.add(preset);
+    curSub = cat.chapters.find(c => c.chapter_id === preset).subject_id;
+    history.replaceState(null, '', '#/pick');
+  }
   // drop remembered chapters that no longer exist or are empty
   for (const id of [...sel]) { const c = cat.chapters.find(x => x.chapter_id === id); if (!c || !avail(c)) sel.delete(id); }
   if (!curSub || !cat.subjects.some(s => s.id === curSub)) {

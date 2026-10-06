@@ -4,6 +4,8 @@ import { $, $$, esc, setMascot, subjectMeta, shortCode, sheet, toast, pick, BULB
 import { getAttempt, cachedAttempt, saveAnswer, completeAttempt, imageUrl, flushAnswers } from '../store.js';
 import { catalog, chapterIndex } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
+import { lessonsMeta, hasAnchor, openLessonSheet } from './learn.js';
+import { anchorLabel } from '../lesson-md.js';
 
 const OK_WORDS = ['NICE!', 'BOOM!', 'SHARP!', 'GOT IT!', 'CLEAN!'];
 const BAD_WORDS = ['ALMOST', 'NOT YET', 'HMM…'];
@@ -28,7 +30,9 @@ export async function renderQuiz(id) {
   if (st !== 'in_progress') { toast('That practice was closed. Start a new one from Home.', 3000); navigate('#/home', { replace: true }); return; }
   let idx = {};
   try { idx = chapterIndex(await catalog()); } catch { /* chip falls back to plain text */ }
-  S = { data, qs: data.questions, i: 0, hint: 0, t0: 0, combo: 0, idx, locked: false };
+  S = { data, qs: data.questions, i: 0, hint: 0, t0: 0, combo: 0, idx, locked: false, lidx: null };
+  const mine = S;
+  lessonsMeta().then(x => { mine.lidx = x; }).catch(() => { /* Read links just stay hidden */ });
   const open = firstOpen();
   if (open === -1) { finish(); return; }
   S.i = open;
@@ -79,6 +83,7 @@ function renderQ() {
   hb.hidden = hints.length === 0;
   hb.innerHTML = `${BULB} Need a hint?`;
   $('#feedback').hidden = true;
+  $('#readlink').hidden = true;
   $('#syncnote').hidden = true;
   $('#combo').hidden = true;
   $('#qscroll').scrollTop = 0;
@@ -119,6 +124,9 @@ async function choose(orig) {
   $('#explain').className = 'panel explain' + (ok ? '' : ' bad');
   $('#explain-h').textContent = ok ? "Why it's right" : 'What to remember';
   $('#exptext').textContent = q.explanation || '';
+  const rl = $('#readlink');
+  rl.hidden = !(!ok && hasAnchor(S.lidx, q.chapter_id, q.lesson_anchor));
+  if (!rl.hidden) rl.innerHTML = `📖 Read: ${esc(anchorLabel(q.lesson_anchor))} ›`;
   const n = S.qs.length, done = S.qs.filter(x => x.answer).length;
   $('#progbar').style.width = (done / n * 100) + '%';
   $('#progwrap').setAttribute('aria-valuenow', done);
@@ -157,6 +165,7 @@ async function finish() {
 /* events (bound once) */
 $('#opts').addEventListener('click', e => { const b = e.target.closest('.opt'); if (b && S) choose(b.dataset.orig); });
 $('#hintbtn').addEventListener('click', showHint);
+$('#readlink').addEventListener('click', () => { const q = S && qAt(); if (q) openLessonSheet(q.chapter_id, q.lesson_anchor); });
 $('#nextbtn').addEventListener('click', () => { if (S && S.locked) next(); });
 $('#ctx').addEventListener('click', e => {
   const f = e.target.closest('.fold'); if (!f) return;
@@ -172,7 +181,7 @@ $('#quitbtn').addEventListener('click', async () => {
   if (leave) { if (S) flushAnswers(S.data.attempt.id); navigate('#/home'); toast('Saved. Continue anytime from Home.'); }
 });
 document.addEventListener('keydown', e => {
-  if (currentRoute()?.name !== 'quiz' || !S || document.querySelector('.sheet')) return;
+  if (currentRoute()?.name !== 'quiz' || !S || document.querySelector('.sheet, .lsheet')) return;
   if (e.target.closest('input,textarea')) return;
   const k = e.key.toLowerCase();
   const pos = ['1', '2', '3', '4'].indexOf(k) !== -1 ? +k - 1 : ['a', 'b', 'c', 'd'].indexOf(k);

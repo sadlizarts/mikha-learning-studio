@@ -3,6 +3,8 @@ import { $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reduced
 import { getAttempt, startAttempt } from '../store.js';
 import { catalog, chapterIndex } from '../state.js';
 import { show, navigate } from '../router.js';
+import { lessonsMeta, hasAnchor, openLessonSheet } from './learn.js';
+import { anchorLabel } from '../lesson-md.js';
 
 function countUp(el, target) {
   if (reducedMotion()) { el.innerHTML = `${target}<small>/100</small>`; return; }
@@ -17,9 +19,10 @@ export async function renderResult(id, { fresh }) {
   $('#result-back').onclick = () => { if (history.length > 1) history.back(); else navigate('#/history'); };
   const body = $('#result-body');
   body.innerHTML = '<div class="loading" style="height:60vh"><div class="spin"></div></div>';
-  let data, idx = {};
+  let data, idx = {}, lidx = {};
   try {
     data = await getAttempt(id);
+    try { lidx = await lessonsMeta(); } catch { /* no Read links */ }
     try { idx = chapterIndex(await catalog(true)); } catch { /* names fall back */ }
   } catch (e) {
     body.innerHTML = `<div class="panel sunk empty" style="margin-top:40px">${esc(e.message)}<button class="btn block" style="margin-top:12px" data-nav="#/home">Home</button></div>`;
@@ -57,7 +60,8 @@ export async function renderResult(id, { fresh }) {
       ${q.context ? `<div class="ctxq">${esc(q.context.length > 220 ? q.context.slice(0, 220) + '…' : q.context)}</div>` : ''}
       <div class="q">${esc(q.stem)}</div>
       <div class="ans"><span class="you">You: ${esc(optText(q, q.answer.chosen_key))}</span><span class="right">Correct: ${esc(optText(q, q.answer_key))}</span></div>
-      <div class="ex">${esc(q.explanation || '')}</div></div>`).join('')
+      <div class="ex">${esc(q.explanation || '')}</div>
+      ${hasAnchor(lidx, q.chapter_id, q.lesson_anchor) ? `<button class="readlink" data-read="${q.chapter_id}" data-anchor="${esc(q.lesson_anchor)}">📖 Read: ${esc(anchorLabel(q.lesson_anchor))} ›</button>` : ''}</div>`).join('')
     : '<div class="panel sunk empty">Perfect run. Nothing to review! 🏆</div>';
 
   const xp = done?.xp_earned ?? a.xp_earned ?? 0;
@@ -89,6 +93,7 @@ export async function renderResult(id, { fresh }) {
     </div>
   </div>`;
   if (fresh) countUp($('#scorebig'), score);
+  body.querySelectorAll('[data-read]').forEach(b => b.onclick = () => openLessonSheet(b.dataset.read, b.dataset.anchor));
   $('#result-body').scrollTop = 0;
 
   $('#againbtn').onclick = async (e) => {
