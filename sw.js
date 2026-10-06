@@ -1,5 +1,5 @@
 // Service worker: caches the app shell only. Never caches *.supabase.co responses (CLAUDE.md rule 5).
-const VERSION = 'mls-v1.2.1';
+const VERSION = 'mls-v1.3.0';
 const KEEP = ['mls-lessons']; // per-user lesson pictures (cleared on sign-out by the app)
 const SHELL = [
   './', './index.html', './manifest.json',
