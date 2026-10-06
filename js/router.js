@@ -16,6 +16,7 @@ export const navigate = (hash, { replace = false } = {}) => {
 export const currentRoute = () => current;
 
 export function show(screen) {
+  document.documentElement.classList.toggle('wide', screen === 'admin');
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + screen));
   const tab = TABS.includes(screen);
   $('#tabbar').hidden = !tab;

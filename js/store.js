@@ -159,3 +159,125 @@ export async function imageUrl(path) {
     return data?.signedUrl || null;
   } catch { return null; }
 }
+
+/* ======================================================================
+   Admin (Phase 3). RLS limits every write below to profiles.role = 'admin'.
+   ====================================================================== */
+export const norm = (s) => String(s ?? '').toLowerCase().trim().replace(/[^\p{L}\p{N}_\s]/gu, '').replace(/\s+/g, ' ');
+export async function stemHash(stem) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(norm(stem)));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export const admin = {
+  async students() {
+    return run(sb.from('profiles').select('id, display_name, role').eq('role', 'student').order('created_at'));
+  },
+  async chapterHashes(chapterId) {
+    const out = new Set(); let from = 0;
+    for (;;) {
+      const rows = await run(sb.from('questions').select('stem_hash').eq('chapter_id', chapterId).range(from, from + 999));
+      rows.forEach(r => out.add(r.stem_hash)); if (rows.length < 1000) break; from += 1000;
+    }
+    return out;
+  },
+  async createBatch({ note, filename, count, userId }) {
+    const rows = await run(sb.from('import_batches').insert({ note, source: 'json', source_filename: filename || null, question_count: count, created_by: userId }).select('id'));
+    return rows[0].id;
+  },
+  async insertQuestions(rows) {
+    let n = 0;
+    for (let i = 0; i < rows.length; i += 100) {
+      const chunk = rows.slice(i, i + 100);
+      await run(sb.from('questions').insert(chunk)); n += chunk.length;
+    }
+    return n;
+  },
+  async batches(limit = 30) {
+    return run(sb.from('import_batches').select('id, created_at, note, source, source_filename, question_count, status').order('created_at', { ascending: false }).limit(limit));
+  },
+  async rollbackBatch(batchId) {
+    const qs = await run(sb.from('questions').select('id').eq('import_batch_id', batchId));
+    const ids = qs.map(q => q.id);
+    let used = new Set();
+    for (let i = 0; i < ids.length; i += 200) {
+      const rows = await run(sb.from('attempt_questions').select('question_id').in('question_id', ids.slice(i, i + 200)));
+      rows.forEach(r => used.add(r.question_id));
+    }
+    const unused = ids.filter(id => !used.has(id));
+    for (let i = 0; i < unused.length; i += 200) await run(sb.from('questions').delete().in('id', unused.slice(i, i + 200)));
+    if (used.size) await run(sb.from('questions').update({ is_active: false }).in('id', [...used]));
+    await run(sb.from('import_batches').update({ status: 'rolled_back' }).eq('id', batchId));
+    return { deleted: unused.length, deactivated: used.size };
+  },
+  async questions({ chapterId, status = 'all', search = '', flagged = false, page = 0, size = 40 }) {
+    let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path, updated_at', { count: 'exact' });
+    if (chapterId) q = q.eq('chapter_id', chapterId);
+    if (status === 'active') q = q.eq('is_active', true);
+    if (status === 'inactive') q = q.eq('is_active', false);
+    if (flagged) q = q.neq('qc_flags', '{}');
+    if (search) q = q.ilike('stem', `%${search.replace(/[%_]/g, m => '\\' + m)}%`);
+    q = q.order('created_at', { ascending: true }).range(page * size, page * size + size - 1);
+    let res; try { res = await q; } catch (e) { throw toAppError(e); }
+    if (res.error) throw toAppError(res.error);
+    return { rows: res.data, count: res.count };
+  },
+  async questionStats(ids) {
+    if (!ids.length) return {};
+    const rows = await run(sb.from('v_question_stats').select('question_id, times_answered, times_wrong, wrong_rate, times_hinted, choice_dist').in('question_id', ids));
+    return Object.fromEntries(rows.map(r => [r.question_id, r]));
+  },
+  async mostMissed({ chapterId = null, minAnswered = 3, limit = 25 } = {}) {
+    let q = sb.from('v_question_stats').select('question_id, chapter_id, times_answered, times_wrong, wrong_rate, times_hinted').gte('times_answered', minAnswered);
+    if (chapterId) q = q.eq('chapter_id', chapterId);
+    return run(q.order('wrong_rate', { ascending: false }).order('times_answered', { ascending: false }).limit(limit));
+  },
+  async questionsByIds(ids) {
+    if (!ids.length) return [];
+    return run(sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path').in('id', ids));
+  },
+  async usageCount(questionId) {
+    const res = await sb.from('attempt_questions').select('question_id', { count: 'exact', head: true }).eq('question_id', questionId);
+    if (res.error) throw toAppError(res.error);
+    return res.count || 0;
+  },
+  async updateQuestion(id, patch) { return run(sb.from('questions').update(patch).eq('id', id).select('id')); },
+  async deleteQuestion(id) { return run(sb.from('questions').delete().eq('id', id)); },
+  async regrade(id) { return run(sb.rpc('regrade_question', { p_question: id })); },
+  async flagCounts() {
+    // inactive questions grouped by QC flag (needs-review queue)
+    const out = {}; let from = 0;
+    for (;;) {
+      const rows = await run(sb.from('questions').select('qc_flags').eq('is_active', false).range(from, from + 999));
+      rows.forEach(r => { const fl = r.qc_flags?.length ? r.qc_flags : ['(no flag)']; fl.forEach(f => { out[f] = (out[f] || 0) + 1; }); });
+      if (rows.length < 1000) break; from += 1000;
+    }
+    return out;
+  },
+  async inactiveByFlag(flag, limit = 40) {
+    let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path').eq('is_active', false);
+    q = flag === '(no flag)' ? q.eq('qc_flags', '{}') : q.contains('qc_flags', [flag]);
+    return run(q.limit(limit));
+  },
+  async studentAttempts(studentId, limit = 60) {
+    return run(sb.from('attempts').select('id, status, chapter_ids, total_questions, answered_count, correct_count, score, started_at, finished_at, duration_s, xp_earned')
+      .eq('user_id', studentId).eq('is_preview', false).order('started_at', { ascending: false }).limit(limit));
+  },
+  async studentProgress(studentId) {
+    const rows = await run(sb.from('user_progress').select('xp_total, current_streak, best_streak, last_completed_date').eq('user_id', studentId).limit(1));
+    return rows[0] || { xp_total: 0, current_streak: 0, best_streak: 0, last_completed_date: null };
+  },
+  async studentChapterStats(studentId) {
+    return run(sb.from('v_chapter_stats').select('chapter_id, answered, accuracy_all, accuracy_recent, hint_rate_recent, last_practiced_at').eq('user_id', studentId));
+  },
+  async goals(studentId) {
+    return run(sb.from('goals').select('*').eq('student_id', studentId).order('created_at', { ascending: false }));
+  },
+  async addGoal(row) { return run(sb.from('goals').insert(row).select('id')); },
+  async setGoalActive(id, on) { return run(sb.from('goals').update({ is_active: on }).eq('id', id)); },
+};
+
+/* student side: active goals ("Today's mission from Dad") */
+export async function myGoals(userId) {
+  try { return await run(sb.from('goals').select('*').eq('student_id', userId).eq('is_active', true)); } catch { return []; }
+}

@@ -35,6 +35,7 @@ let toastTimer;
 export function toast(msg, ms = 1800) {
   const t = $('#toast');
   t.textContent = msg; t.classList.add('show');
+  if (document.querySelector('.editor')) t.style.bottom = 'calc(84px + env(safe-area-inset-bottom,0px))';
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 

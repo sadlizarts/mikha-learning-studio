@@ -10,6 +10,7 @@ import { renderQuiz } from './features/quiz.js';
 import { renderResult } from './features/result.js';
 import { renderHistory } from './features/history.js';
 import { renderProgress } from './features/progress.js';
+import { renderAdmin } from './features/admin/index.js';
 
 window.MLS = { app };
 
@@ -37,6 +38,7 @@ async function boot() {
   route('session', (id) => renderResult(id, { fresh: false }));
   route('history', renderHistory);
   route('progress', renderProgress);
+  route('admin', renderAdmin);
   route('learn', () => { show('learn'); $$('[data-mascot]').forEach(el => setMascot(el, el.dataset.mascot)); });
 
   startRouter();
