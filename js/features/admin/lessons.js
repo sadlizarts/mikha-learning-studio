@@ -33,9 +33,11 @@ export async function renderLessons(body) {
         <td class="r num">v${l.version}</td>
         <td class="num">${esc(shortDay(l.updated_at))}</td>
         <td class="r" style="white-space:nowrap"><button class="btn small" data-edit="${l.chapter_id}">Edit</button>
+          <button class="btn small" data-pages="${l.id}" data-ch="${l.chapter_id}">Pages</button>
           <button class="btn small" data-hist="${l.id}" data-ch="${l.chapter_id}">History</button>
           <button class="btn small" data-pub="${l.id}" data-to="${l.status === 'published' ? 'draft' : 'published'}">${l.status === 'published' ? 'Unpublish' : 'Publish'}</button></td></tr>`).join('')}</tbody></table>` : '<p class="note" style="margin-top:6px">No lessons yet.</p>'}
     </div>
+    <div id="les-pages"></div>
     <div class="panel" id="les-editor">
       <h3>Import or edit a lesson (.md)</h3>
       <p class="note" style="margin-top:4px">Format: PRD Lampiran E. Claude writes these files in <b>Content/&lt;Subject&gt;/</b>; pictures are in <b>Content/&lt;Subject&gt;/img/</b>. Nothing is saved until you press Save or Publish.</p>
