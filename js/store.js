@@ -372,7 +372,8 @@ export const admin = {
     const fields = { body_md: body, status, read_minutes: parsed.readMinutes, anchors: parsed.anchors, language: parsed.meta.language || 'en', updated_by: userId, updated_at: new Date().toISOString() };
     let row;
     if (cur) {
-      await run(sb.from('lesson_versions').insert({ lesson_id: cur.id, version: cur.version, body_md: cur.body_md }));
+      // keep the current body in history; it may already be there (e.g. the seeded v1), so never fail on a duplicate
+      await run(sb.from('lesson_versions').upsert({ lesson_id: cur.id, version: cur.version, body_md: cur.body_md }, { onConflict: 'lesson_id,version', ignoreDuplicates: true }));
       row = (await run(sb.from('lessons').update({ ...fields, version: cur.version + 1 }).eq('id', cur.id).select('id, version')))[0];
     } else {
       row = (await run(sb.from('lessons').insert({ ...fields, chapter_id: chapterId, version: 1 }).select('id, version')))[0];
