@@ -51,7 +51,7 @@ export async function signIn(email, password) {
   return data.session;
 }
 export async function signOut() {
-  Object.keys(localStorage).filter(k => k.startsWith('mls_attempt_') || k.startsWith('mls_q_') || k.startsWith('mls_lesson_')).forEach(lsDel);
+  Object.keys(localStorage).filter(k => k.startsWith('mls_attempt_') || k.startsWith('mls_q_') || k.startsWith('mls_lesson_') || k.startsWith('mls_page_')).forEach(lsDel);
   await clearLessonCache();
   await sb.auth.signOut();
 }
@@ -163,14 +163,22 @@ export async function imageUrl(path) {
 
 /* ---------------- Learn (Phase 2b) ---------------- */
 const LESSON_DIR = 'lessons/';
-/** published lessons, without bodies (cheap; used by Learn list, quiz Read links, Progress) */
+/** published lessons + their published pages, without bodies (cheap; used by Learn list, quiz Read links, Progress).
+ *  Each entry: { chapter_id, id, version, read_minutes, anchors (lesson + pages), lessonAnchors, pages:[{slug,title,sort_order,read_minutes,anchors}] } */
 export async function lessonIndex() {
-  const rows = await run(sb.from('lessons').select('chapter_id, version, read_minutes, anchors, updated_at').eq('status', 'published'));
-  return Object.fromEntries(rows.map(r => [r.chapter_id, r]));
+  const rows = await run(sb.from('lessons').select('id, chapter_id, version, read_minutes, anchors, updated_at, lesson_pages(slug, title, sort_order, read_minutes, anchors, status)').eq('status', 'published'));
+  return Object.fromEntries(rows.map(r => {
+    const pages = (r.lesson_pages || []).filter(p => p.status === 'published').sort((a, b) => a.sort_order - b.sort_order).map(({ status, ...p }) => p);
+    const anchors = [...new Set([...(r.anchors || []), ...pages.flatMap(p => p.anchors || [])])];
+    return [r.chapter_id, { chapter_id: r.chapter_id, id: r.id, version: r.version, read_minutes: r.read_minutes, updated_at: r.updated_at, lessonAnchors: r.anchors || [], anchors, pages }];
+  }));
 }
+/** which page (slug) holds an anchor; null when it is in the lesson body itself (or unknown) */
+export const pageForAnchor = (entry, anchor) => (!anchor || (entry?.lessonAnchors || []).includes(anchor)) ? null   // the lesson body wins
+  : entry?.pages?.find(p => (p.anchors || []).includes(anchor))?.slug || null;
 export async function myLessonReads(userId) {
   try {
-    const rows = await run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, quick_check_score, quick_check_total').eq('user_id', userId));
+    const rows = await run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, quick_check_score, quick_check_total, pages_read').eq('user_id', userId));
     return Object.fromEntries(rows.map(r => [r.chapter_id, r]));
   } catch { return {}; }
 }
@@ -230,6 +238,26 @@ export async function lessonImages(lesson, names) {
   return out;
 }
 export async function clearLessonCache() { try { await caches.delete(IMG_CACHE); } catch { /* ignore */ } }
+/** One page body (converted Study Studio chapter). Cached per page in localStorage; offline falls back to the cache. */
+export async function loadPage(chapterId, slug) {
+  const key = `mls_page_${chapterId}_${slug}`;
+  const cached = lsGet(key, null);
+  let row;
+  try {
+    const rows = await run(sb.from('lesson_pages').select('id, lesson_id, slug, title, sort_order, read_minutes, anchors, body_md, status, updated_at, lessons!inner(chapter_id)').eq('slug', slug).eq('lessons.chapter_id', chapterId).limit(1));
+    row = rows[0];
+  } catch (e) {
+    if (cached) return { page: cached, offline: true };
+    throw e;
+  }
+  if (!row || row.status !== 'published') { lsDel(key); return null; }
+  const { lessons, ...page } = row; page.chapter_id = chapterId;
+  lsSet(key, page);
+  return { page, offline: false };
+}
+export async function markPage(chapterId, slug) {
+  try { return await run(sb.rpc('mark_lesson_page', { p_chapter: chapterId, p_slug: slug })); } catch { return null; }
+}
 export async function completeLesson(chapterId, score, total) {
   return run(sb.rpc('complete_lesson', { p_chapter: chapterId, p_qc_score: score, p_qc_total: total }));
 }
@@ -356,9 +384,21 @@ export const admin = {
     return run(sb.from('lessons').select('id, chapter_id, version, status, read_minutes, anchors, updated_at').order('updated_at', { ascending: false }));
   },
   async lessonAnchors() {
-    const rows = await run(sb.from('lessons').select('chapter_id, anchors'));
-    return Object.fromEntries(rows.map(r => [r.chapter_id, r.anchors || []]));
+    const rows = await run(sb.from('lessons').select('chapter_id, anchors, lesson_pages(anchors)'));
+    return Object.fromEntries(rows.map(r => [r.chapter_id, [...new Set([...(r.anchors || []), ...(r.lesson_pages || []).flatMap(p => p.anchors || [])])]]));
   },
+  /* ---- lesson pages (converted Study Studio chapters) ---- */
+  async pages(lessonId) {
+    return run(sb.from('lesson_pages').select('id, slug, title, sort_order, read_minutes, anchors, status, updated_at').eq('lesson_id', lessonId).order('sort_order'));
+  },
+  async page(id) { return (await run(sb.from('lesson_pages').select('*').eq('id', id).limit(1)))[0] || null; },
+  /** insert or replace by (lesson_id, slug) */
+  async savePage({ lessonId, slug, title, order, body, parsed, status = 'published', userId }) {
+    const row = { lesson_id: lessonId, slug, title, sort_order: order, body_md: body, read_minutes: parsed.readMinutes, anchors: parsed.anchors, status, updated_by: userId, updated_at: new Date().toISOString() };
+    return (await run(sb.from('lesson_pages').upsert(row, { onConflict: 'lesson_id,slug' }).select('id, slug')))[0];
+  },
+  async setPageStatus(id, status) { return run(sb.from('lesson_pages').update({ status, updated_at: new Date().toISOString() }).eq('id', id)); },
+  async deletePage(id) { return run(sb.from('lesson_pages').delete().eq('id', id)); },
   async lesson(chapterId) {
     const rows = await run(sb.from('lessons').select('*').eq('chapter_id', chapterId).limit(1));
     return rows[0] || null;
@@ -414,7 +454,7 @@ export const admin = {
     return data?.signedUrl || null;
   },
   async lessonReads(studentId) {
-    return run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, last_read_at, quick_check_score, quick_check_total').eq('user_id', studentId));
+    return run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, last_read_at, quick_check_score, quick_check_total, pages_read').eq('user_id', studentId));
   },
 };
 
