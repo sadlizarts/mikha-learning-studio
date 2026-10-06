@@ -1,0 +1,41 @@
+/* Design tokens — DESIGN.md §2. Components use tokens only, never literal hex. */
+:root{
+  --paper:#FAF6EE; --paper-2:#F1EBDF; --card:#FFFFFF;
+  --ink:#1B1826; --ink-2:#4A4559; --ink-3:#6B657C; --line:#1B1826;
+  --ember:#FF4D2E; --ember-ink:#FFFFFF;
+  --volt:#FFD233; --volt-2:#F5C400; --volt-ink:#1B1826;
+  --ok:#117A46; --ok-soft:#DDF6E8; --ok-ink:#FFFFFF;
+  --bad:#D32F34; --bad-soft:#FBE1E2; --bad-ink:#FFFFFF;
+  --hint:#5F42E6; --hint-soft:#ECE7FF;
+  --sub-math:#1D5FD0; --sub-sci:#157F4B; --sub-eng:#5E3FE0; --sub-ind:#C42A2F; --sub-pan:#8A5A00; --sub-aga:#0A7A7A;
+  --on-sub:#FFFFFF;
+  --scrim:rgba(27,24,38,.6);
+  --shadow:4px 4px 0 var(--ink); --shadow-sm:2px 2px 0 var(--ink); --shadow-press:1px 1px 0 var(--ink);
+  --r:14px; --r-sm:10px;
+  --display:'Lilita One','Arial Black',Impact,sans-serif;
+  --body:'Nunito','Segoe UI',system-ui,sans-serif;
+  --tab-h:64px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#14121F; --paper-2:#1C1929; --card:#211E31;
+  --ink:#F3EFFF; --ink-2:#CFC9E3; --ink-3:#A39DBA; --line:#F3EFFF;
+  --ember:#FF5A3C; --volt:#FFD84D; --volt-2:#E6BE2E; --volt-ink:#14121F;
+  --ok:#2ED47A; --ok-soft:#153726; --ok-ink:#14121F; --bad:#FF5C61; --bad-soft:#3D1C1E; --bad-ink:#14121F;
+  --hint:#9B85FF; --hint-soft:#2A2347;
+  --sub-math:#5B9BFF; --sub-sci:#2ED47A; --sub-eng:#A48CFF; --sub-ind:#FF6B6F; --sub-pan:#FFC43D; --sub-aga:#35C9C9; --on-sub:#14121F;
+  --scrim:rgba(0,0,0,.65);
+  --shadow:4px 4px 0 #000; --shadow-sm:2px 2px 0 #000; --shadow-press:1px 1px 0 #000;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#14121F; --paper-2:#1C1929; --card:#211E31;
+  --ink:#F3EFFF; --ink-2:#CFC9E3; --ink-3:#A39DBA; --line:#F3EFFF;
+  --ember:#FF5A3C; --volt:#FFD84D; --volt-2:#E6BE2E; --volt-ink:#14121F;
+  --ok:#2ED47A; --ok-soft:#153726; --ok-ink:#14121F; --bad:#FF5C61; --bad-soft:#3D1C1E; --bad-ink:#14121F;
+  --hint:#9B85FF; --hint-soft:#2A2347;
+  --sub-math:#5B9BFF; --sub-sci:#2ED47A; --sub-eng:#A48CFF; --sub-ind:#FF6B6F; --sub-pan:#FFC43D; --sub-aga:#35C9C9; --on-sub:#14121F;
+  --scrim:rgba(0,0,0,.65);
+  --shadow:4px 4px 0 #000; --shadow-sm:2px 2px 0 #000; --shadow-press:1px 1px 0 #000;
+  color-scheme:dark;
+}
