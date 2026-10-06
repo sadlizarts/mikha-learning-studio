@@ -1,5 +1,5 @@
 // Service worker: caches the app shell only. Never caches *.supabase.co responses (CLAUDE.md rule 5).
-const VERSION = 'mls-v1.3.0';
+const VERSION = 'mls-v1.3.1';
 const KEEP = ['mls-lessons']; // per-user lesson pictures (cleared on sign-out by the app)
 const SHELL = [
   './', './index.html', './manifest.json',
@@ -16,7 +16,7 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())); // 'reload' bypasses the HTTP cache so a release never installs stale files
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && !KEEP.includes(k)).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -33,7 +33,7 @@ self.addEventListener('fetch', (e) => {
   }
   // stale-while-revalidate for static files
   e.respondWith(caches.match(req).then(hit => {
-    const net = fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; }).catch(() => hit);
+    const net = fetch(req, { cache: 'no-cache' }).then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; }).catch(() => hit);
     return hit || net;
   }));
 });
