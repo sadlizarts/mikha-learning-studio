@@ -94,7 +94,7 @@
         <div id="hints" class="stack" style="gap:8px"></div>
         <div id="feedback" class="stack" hidden aria-live="polite">
           <div class="verdict"><div class="mascot" id="m-quiz"></div><div class="impact" id="impact"></div></div>
-          <div class="panel explain" id="explain"><div class="eyebrow" id="explain-h">Why</div><p id="exptext"></p></div>
+          <div class="panel explain" id="explain"><div class="eyebrow" id="explain-h">Why</div><p id="exptext"></p><button class="readlink" id="readlink" hidden></button></div>
           <div class="syncnote" id="syncnote" hidden>Saved on this device — it will sync when you're back online.</div>
           <button class="btn primary lg block" id="nextbtn">Next →</button>
         </div>
@@ -114,10 +114,15 @@
     <div class="scroll"><div class="recent" id="historylist"></div></div>
   </section>
 
-  <!-- LEARN / PROGRESS (next phases) -->
+  <!-- LEARN -->
   <section class="screen" id="s-learn" aria-label="Learn">
     <div class="top"><h2>Learn</h2></div>
-    <div class="scroll"><div class="panel sunk soon"><div class="row"><div class="mascot sm" data-mascot="think"></div><div class="grow"><b style="color:var(--ink)">Lessons are on the way.</b><p class="note" style="margin-top:4px">Science Unit 2 is written. The reading pages arrive in the next update.</p></div></div></div></div>
+    <div class="scroll" id="learn-body"></div>
+  </section>
+  <!-- LESSON (full screen; the same lesson also opens as a sheet over quiz/result) -->
+  <section class="screen" id="s-lesson" aria-label="Lesson">
+    <div class="top"><button class="back" id="lesson-back" aria-label="Back">‹</button><h2 id="lesson-title" style="font-size:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Lesson</h2></div>
+    <div class="scroll no-tab" id="lesson-scroll"><div id="lesson-body"></div></div>
   </section>
   <section class="screen" id="s-progress" aria-label="Progress">
     <div class="top"><h2>Progress</h2></div>
@@ -130,6 +135,7 @@
     <nav class="atabs" id="atabs" aria-label="Admin sections">
       <button data-nav="#/admin/import" data-a="import">Import</button>
       <button data-nav="#/admin/questions" data-a="questions">Questions</button>
+      <button data-nav="#/admin/lessons" data-a="lessons">Lessons</button>
       <button data-nav="#/admin/review" data-a="review">Needs review</button>
       <button data-nav="#/admin/student" data-a="student">Student</button>
       <button data-nav="#/admin/goals" data-a="goals">Goals</button>
