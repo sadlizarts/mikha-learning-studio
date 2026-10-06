@@ -220,10 +220,10 @@ p{margin:0}
 
 /* ---------- misc ---------- */
 .empty{text-align:center;font-weight:800;color:var(--ink)}
-.toast{position:absolute;left:16px;right:16px;bottom:calc(var(--tab-h) + 16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);border-radius:12px;padding:12px 14px;font-weight:800;text-align:center;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:30}
+.toast{position:absolute;left:16px;right:16px;bottom:calc(var(--tab-h) + 16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);border-radius:12px;padding:12px 14px;font-weight:800;text-align:center;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:50}
 .toast.show{opacity:1;transform:none}
 .offline{position:absolute;top:0;left:0;right:0;z-index:40;background:var(--volt);color:var(--volt-ink);font-weight:900;font-size:13px;text-align:center;padding:calc(6px + env(safe-area-inset-top,0px)) 12px 6px;border-bottom:2px solid var(--line)}
-.sheet{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;z-index:20;padding:16px calc(16px) calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;z-index:40;padding:16px calc(16px) calc(16px + env(safe-area-inset-bottom,0px))}
 .sheet .panel{width:100%;animation:slideUp .25s cubic-bezier(.2,.8,.2,1)}
 .sheet h3{font-size:22px}
 .sheet p{color:var(--ink-2);font-weight:700;margin:8px 0 14px}
@@ -231,3 +231,51 @@ p{margin:0}
 .loading{display:grid;place-items:center;height:100%;gap:12px;text-align:center;font-weight:800;color:var(--ink-3)}
 .spin{width:36px;height:36px;border:4px solid var(--paper-2);border-top-color:var(--ember);border-radius:50%;animation:spin .8s linear infinite}
 .soon{padding:22px 16px}
+
+/* ---------- admin (DESIGN §5.8: flat, dense, no mascot) ---------- */
+.admin .panel{box-shadow:none}
+.admin .btn{box-shadow:none;min-height:44px;font-size:17px}
+.admin .btn.small{min-height:34px;font-size:13px}
+.atabs{display:flex;gap:6px;overflow-x:auto;padding:4px 16px 8px;scrollbar-width:none;border-bottom:2px solid var(--line)}
+.atabs::-webkit-scrollbar{display:none}
+.atabs button{flex:none;height:38px;padding:0 12px;border:2px solid var(--line);border-radius:10px;font-weight:900;font-size:14px;color:var(--ink);background:var(--card)}
+.atabs button.on{background:var(--ink);color:var(--paper)}
+.admin h3{font-size:20px}
+.admin label.lbl{display:block;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:10px 0 4px}
+.admin textarea,.admin select,.admin input[type=text],.admin input[type=number],.admin input[type=date],.admin input[type=search]{width:100%;font:inherit;font-size:15px;font-weight:600;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:var(--r-sm);padding:8px 10px}
+.admin textarea{min-height:90px;resize:vertical;line-height:1.4}
+.admin textarea.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;min-height:160px}
+.admin select,.admin input{height:44px}
+.admin input[type=checkbox]{width:20px;height:20px;accent-color:var(--ember)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--paper-2);vertical-align:top;color:var(--ink)}
+.tbl th{font-size:11.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line)}
+.tbl tr:nth-child(even) td{background:var(--paper-2)}
+.tbl td.r,.tbl th.r{text-align:right}
+.tag{display:inline-block;font-size:11.5px;font-weight:900;padding:1px 7px;border-radius:999px;border:1.5px solid var(--line);color:var(--ink);background:var(--card);margin:1px 2px 1px 0;white-space:nowrap}
+.tag.ok{border-color:var(--ok);color:var(--ok)} .tag.bad{border-color:var(--bad);color:var(--bad)} .tag.warn{background:var(--volt);color:var(--volt-ink)} .tag.mute{color:var(--ink-3);border-color:var(--ink-3)}
+.qrow{border:2px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);width:100%;text-align:left;display:block}
+.qrow .s{font-weight:800;color:var(--ink);font-size:14.5px;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.qrow.inactive{opacity:.7;border-style:dashed}
+.stage{border:2px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.stage.err{border-color:var(--bad)} .stage.warn{border-color:var(--volt-2)}
+.stage .msgs{font-size:12.5px;font-weight:800;margin-top:6px}
+.stage .msgs .e{color:var(--bad)} .stage .msgs .w{color:var(--ink-2)}
+.stage details summary{cursor:pointer;font-weight:800;color:var(--ink);font-size:14px}
+.stage .opts-mini{font-size:13.5px;margin:6px 0 0;padding-left:18px;color:var(--ink-2)}
+.stage .opts-mini li.key{color:var(--ok);font-weight:900}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi > div{border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--card);text-align:center}
+.kpi .v{font-family:var(--display);font-size:24px;color:var(--ink);line-height:1}
+.kpi .l{font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+@media (max-width:420px){.kpi{grid-template-columns:repeat(2,1fr)}}
+.spark{width:100%;height:120px;display:block}
+.editor{position:absolute;inset:0;z-index:25;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.editor .scroll{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+.editor .bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--paper);border-top:2px solid var(--line)}
+.mission{border-left:8px solid var(--volt)}
+.mission .item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+.mission .item + .item{border-top:2px dashed var(--paper-2)}
+.btn.small{white-space:nowrap}
+html.wide #app{max-width:980px}
