@@ -51,7 +51,8 @@ export async function signIn(email, password) {
   return data.session;
 }
 export async function signOut() {
-  Object.keys(localStorage).filter(k => k.startsWith('mls_attempt_') || k.startsWith('mls_q_')).forEach(lsDel);
+  Object.keys(localStorage).filter(k => k.startsWith('mls_attempt_') || k.startsWith('mls_q_') || k.startsWith('mls_lesson_')).forEach(lsDel);
+  await clearLessonCache();
   await sb.auth.signOut();
 }
 export const onAuthChange = (fn) => sb.auth.onAuthStateChange((evt, session) => fn(evt, session));
@@ -160,6 +161,79 @@ export async function imageUrl(path) {
   } catch { return null; }
 }
 
+/* ---------------- Learn (Phase 2b) ---------------- */
+const LESSON_DIR = 'lessons/';
+/** published lessons, without bodies (cheap; used by Learn list, quiz Read links, Progress) */
+export async function lessonIndex() {
+  const rows = await run(sb.from('lessons').select('chapter_id, version, read_minutes, anchors, updated_at').eq('status', 'published'));
+  return Object.fromEntries(rows.map(r => [r.chapter_id, r]));
+}
+export async function myLessonReads(userId) {
+  try {
+    const rows = await run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, quick_check_score, quick_check_total').eq('user_id', userId));
+    return Object.fromEntries(rows.map(r => [r.chapter_id, r]));
+  } catch { return {}; }
+}
+const IMG_CACHE = 'mls-lessons';
+const imgKey = (chapterId, version, name) => `./__lesson-img/${chapterId}/${version}/${encodeURIComponent(name)}`;
+async function fetchLessonImage(name) {
+  const { data } = await sb.storage.from('question-images').createSignedUrl(LESSON_DIR + name, 3600);
+  if (!data?.signedUrl) return null;
+  const res = await fetch(data.signedUrl);
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  // SVG served without its type would not render in <img>
+  return /\.svg$/i.test(name) && blob.type !== 'image/svg+xml' ? new Blob([await blob.text()], { type: 'image/svg+xml' }) : blob;
+}
+/**
+ * One lesson body. Cached per user in localStorage (FR-73: readable offline once opened; cleared on sign-out);
+ * pictures go to the Cache API (see lessonImages). Returns { lesson, offline } or null when not published.
+ */
+export async function loadLesson(chapterId) {
+  const key = 'mls_lesson_' + chapterId;
+  const cached = lsGet(key, null);
+  let row;
+  try {
+    const rows = await run(sb.from('lessons').select('chapter_id, version, read_minutes, anchors, updated_at, body_md, status').eq('chapter_id', chapterId).limit(1));
+    row = rows[0];
+  } catch (e) {
+    if (cached) return { lesson: cached, offline: true };
+    throw e;
+  }
+  if (!row || row.status !== 'published') { lsDel(key); return null; }
+  lsSet(key, row);
+  return { lesson: row, offline: false };
+}
+/** Pictures for a lesson as object URLs; served from the per-user cache when present. Missing → no entry. */
+export async function lessonImages(lesson, names) {
+  const out = {};
+  const seg = `${lesson.version}-${Date.parse(lesson.updated_at || 0) || 0}`;
+  let cache = null;
+  try { cache = await caches.open(IMG_CACHE); } catch { /* no Cache API (private mode) */ }
+  if (cache) {
+    // drop pictures of older versions of this lesson
+    try { for (const req of await cache.keys()) { const u = req.url; if (u.includes(`/__lesson-img/${lesson.chapter_id}/`) && !u.includes(`/${lesson.chapter_id}/${seg}/`)) cache.delete(req); } } catch { /* ignore */ }
+  }
+  await Promise.all(names.map(async n => {
+    const k = imgKey(lesson.chapter_id, seg, n);
+    try {
+      let blob = null;
+      const hit = cache && await cache.match(k);
+      if (hit) blob = await hit.blob();
+      else {
+        blob = await fetchLessonImage(n);
+        if (blob && cache) await cache.put(k, new Response(blob, { headers: { 'Content-Type': blob.type } }));
+      }
+      if (blob) out[n] = URL.createObjectURL(blob);
+    } catch { /* placeholder stays */ }
+  }));
+  return out;
+}
+export async function clearLessonCache() { try { await caches.delete(IMG_CACHE); } catch { /* ignore */ } }
+export async function completeLesson(chapterId, score, total) {
+  return run(sb.rpc('complete_lesson', { p_chapter: chapterId, p_qc_score: score, p_qc_total: total }));
+}
+
 /* ======================================================================
    Admin (Phase 3). RLS limits every write below to profiles.role = 'admin'.
    ====================================================================== */
@@ -212,6 +286,7 @@ export const admin = {
   },
   async questions({ chapterId, status = 'all', search = '', flagged = false, page = 0, size = 40 }) {
     let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path, updated_at', { count: 'exact' });
+    q = q.eq('is_quick_check', false);
     if (chapterId) q = q.eq('chapter_id', chapterId);
     if (status === 'active') q = q.eq('is_active', true);
     if (status === 'inactive') q = q.eq('is_active', false);
@@ -248,7 +323,7 @@ export const admin = {
     // inactive questions grouped by QC flag (needs-review queue)
     const out = {}; let from = 0;
     for (;;) {
-      const rows = await run(sb.from('questions').select('qc_flags').eq('is_active', false).range(from, from + 999));
+      const rows = await run(sb.from('questions').select('qc_flags').eq('is_active', false).eq('is_quick_check', false).range(from, from + 999));
       rows.forEach(r => { const fl = r.qc_flags?.length ? r.qc_flags : ['(no flag)']; fl.forEach(f => { out[f] = (out[f] || 0) + 1; }); });
       if (rows.length < 1000) break; from += 1000;
     }
@@ -275,6 +350,71 @@ export const admin = {
   },
   async addGoal(row) { return run(sb.from('goals').insert(row).select('id')); },
   async setGoalActive(id, on) { return run(sb.from('goals').update({ is_active: on }).eq('id', id)); },
+
+  /* ---- lessons (FR-57..FR-59) ---- */
+  async lessons() {
+    return run(sb.from('lessons').select('id, chapter_id, version, status, read_minutes, anchors, updated_at').order('updated_at', { ascending: false }));
+  },
+  async lessonAnchors() {
+    const rows = await run(sb.from('lessons').select('chapter_id, anchors'));
+    return Object.fromEntries(rows.map(r => [r.chapter_id, r.anchors || []]));
+  },
+  async lesson(chapterId) {
+    const rows = await run(sb.from('lessons').select('*').eq('chapter_id', chapterId).limit(1));
+    return rows[0] || null;
+  },
+  async lessonVersions(lessonId) {
+    return run(sb.from('lesson_versions').select('id, version, created_at, body_md').eq('lesson_id', lessonId).order('version', { ascending: false }));
+  },
+  /** Save a lesson. The previous body goes to lesson_versions first, so every save can be undone. */
+  async saveLesson({ chapterId, body, parsed, status, userId }) {
+    const cur = await this.lesson(chapterId);
+    const fields = { body_md: body, status, read_minutes: parsed.readMinutes, anchors: parsed.anchors, language: parsed.meta.language || 'en', updated_by: userId, updated_at: new Date().toISOString() };
+    let row;
+    if (cur) {
+      await run(sb.from('lesson_versions').insert({ lesson_id: cur.id, version: cur.version, body_md: cur.body_md }));
+      row = (await run(sb.from('lessons').update({ ...fields, version: cur.version + 1 }).eq('id', cur.id).select('id, version')))[0];
+    } else {
+      row = (await run(sb.from('lessons').insert({ ...fields, chapter_id: chapterId, version: 1 }).select('id, version')))[0];
+    }
+    await this.syncQuickCheck(chapterId, parsed.quick, parsed.meta.language || 'en');
+    return row;
+  },
+  async setLessonStatus(id, status) {
+    return run(sb.from('lessons').update({ status, updated_at: new Date().toISOString() }).eq('id', id));
+  },
+  /** Quick check lives in questions (is_quick_check = true), outside every pool and statistic (PRD §10.3). */
+  async syncQuickCheck(chapterId, quick, language) {
+    const old = await run(sb.from('questions').select('id').eq('chapter_id', chapterId).eq('is_quick_check', true));
+    if (old.length) await run(sb.from('questions').delete().in('id', old.map(q => q.id)));
+    if (!quick?.length) return 0;
+    const rows = await Promise.all(quick.map(async q => ({
+      chapter_id: chapterId, stem: q.stem, options: q.options, answer_key: q.answer, explanation: q.explanation,
+      hints: [], language, stem_hash: await stemHash(q.stem), is_active: true, is_quick_check: true, source: 'mls', qc_flags: [],
+    })));
+    await run(sb.from('questions').insert(rows));
+    return rows.length;
+  },
+  async lessonImageNames() {
+    const { data, error } = await sb.storage.from('question-images').list('lessons', { limit: 1000 });
+    if (error) throw toAppError(error);
+    return new Set((data || []).map(f => f.name));
+  },
+  async uploadLessonImage(file) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const type = { svg: 'image/svg+xml', webp: 'image/webp', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' }[ext] || file.type || 'application/octet-stream';
+    // re-wrap so the stored object always carries the right type (Windows sometimes reports SVG as text/xml or nothing)
+    const body = new Blob([await file.arrayBuffer()], { type });
+    const { error } = await sb.storage.from('question-images').upload(LESSON_DIR + file.name, body, { upsert: true, contentType: type, cacheControl: '3600' });
+    if (error) throw toAppError(error);
+  },
+  async lessonImageUrl(name) {
+    const { data } = await sb.storage.from('question-images').createSignedUrl(LESSON_DIR + name, 3600);
+    return data?.signedUrl || null;
+  },
+  async lessonReads(studentId) {
+    return run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, last_read_at, quick_check_score, quick_check_total').eq('user_id', studentId));
+  },
 };
 
 /* student side: active goals ("Today's mission from Dad") */

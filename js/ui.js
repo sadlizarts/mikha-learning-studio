@@ -99,3 +99,17 @@ export function levelInfo(xp) {
   return { level: L, tier, pct: Math.round(100 * (xp - from) / (to - from)), toNext: to - xp };
 }
 export const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+/* score trend (DESIGN §5.6): Ember area 12 %, Ember line 3 px, last point Volt, dashed red line at the Needs-work threshold */
+export function trendSVG(scores, threshold = 70, { W = 520, H = 130 } = {}) {
+  if (scores.length < 2) return '<p class="note">The trend appears after 2 finished practices.</p>';
+  const P = 10, n = scores.length;
+  const x = (i) => P + i * (W - 2 * P) / (n - 1), y = (s) => H - P - s * (H - 2 * P) / 100;
+  const pts = scores.map((s, i) => `${x(i).toFixed(1)},${y(s).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Last ${n} scores: ${scores.join(', ')}">
+    <line x1="${P}" x2="${W - P}" y1="${y(threshold)}" y2="${y(threshold)}" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <text x="${W - P}" y="${y(threshold) - 4}" text-anchor="end" font-size="11" font-weight="800" fill="var(--bad)">${threshold}</text>
+    <polygon points="${x(0)},${H - P} ${pts} ${x(n - 1)},${H - P}" fill="var(--ember)" opacity=".12"/>
+    <polyline points="${pts}" fill="none" stroke="var(--ember)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(n - 1)}" cy="${y(scores[n - 1])}" r="6" fill="var(--volt)" stroke="var(--ink)" stroke-width="2"/></svg>`;
+}

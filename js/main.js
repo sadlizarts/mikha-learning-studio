@@ -1,8 +1,8 @@
 // Boot: session → route guard → screens. No build step (CLAUDE.md).
-import { $, $$, setMascot, toast } from './ui.js';
+import { $, toast } from './ui.js';
 import { getSession, onAuthChange } from './store.js';
 import { app, setSession } from './state.js';
-import { route, setGuard, startRouter, show, navigate } from './router.js';
+import { route, setGuard, startRouter, navigate } from './router.js';
 import { renderLogin } from './auth.js';
 import { renderHome } from './features/home.js';
 import { renderPick } from './features/pick.js';
@@ -11,6 +11,7 @@ import { renderResult } from './features/result.js';
 import { renderHistory } from './features/history.js';
 import { renderProgress } from './features/progress.js';
 import { renderAdmin } from './features/admin/index.js';
+import { renderLearn, renderLesson } from './features/learn.js';
 
 window.MLS = { app };
 
@@ -39,7 +40,8 @@ async function boot() {
   route('history', renderHistory);
   route('progress', renderProgress);
   route('admin', renderAdmin);
-  route('learn', () => { show('learn'); $$('[data-mascot]').forEach(el => setMascot(el, el.dataset.mascot)); });
+  route('learn', renderLearn);
+  route('lesson', renderLesson);
 
   startRouter();
 }
@@ -53,6 +55,12 @@ netState();
 /* service worker (app shell only; never caches Supabase) */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // A new release took over: reload on the next screen change (never in the middle of a question)
+  // so new HTML never runs with old cached scripts.
+  const hadController = !!navigator.serviceWorker.controller;
+  let pendingReload = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) pendingReload = true; });
+  window.addEventListener('hashchange', () => { if (pendingReload && !/^#\/quiz\//.test(location.hash)) location.reload(); });
 }
 
 boot();
