@@ -36,7 +36,9 @@ export async function renderQuestions(body) {
   list(idx);
 }
 
+let listSeq = 0;
 async function list(idx) {
+  const my = ++listSeq; // ignore stale responses when filters change quickly
   const el = $('#q-list'); el.innerHTML = '<div class="spin"></div>';
   try {
     let rows, count, stats;
@@ -50,6 +52,7 @@ async function list(idx) {
       ({ rows, count } = await admin.questions({ chapterId: F.chapterId, status: F.status, search: F.search, page: F.page, size: 40, audit: { aspect: F.aspect, result: F.result } }));
       stats = await admin.questionStats(rows.map(r => r.id));
     }
+    if (my !== listSeq) return;
     const pages = Math.max(1, Math.ceil(count / 40));
     el.innerHTML = `<p class="note" style="margin:0 0 8px">${count} question${count === 1 ? '' : 's'}${F.mode === 'browse' && pages > 1 ? ` · page ${F.page + 1}/${pages}` : ''}</p>
       <div class="stack" style="gap:8px">${rows.map(q => `<button class="qrow ${q.is_active ? '' : 'inactive'}" data-q="${q.id}">
@@ -60,5 +63,5 @@ async function list(idx) {
     $$('[data-q]', el).forEach(b => b.onclick = async () => { if (await openEditor(byId[b.dataset.q], { idx, stats: stats[b.dataset.q] })) list(idx); });
     if ($('#q-prev')) $('#q-prev').onclick = () => { F.page--; list(idx); };
     if ($('#q-next')) $('#q-next').onclick = () => { F.page++; list(idx); };
-  } catch (e) { el.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; toast(e.message); }
+  } catch (e) { if (my !== listSeq) return; el.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; toast(e.message); }
 }
