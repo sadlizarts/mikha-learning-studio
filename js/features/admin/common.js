@@ -20,7 +20,20 @@ export function qTags(q, st) {
   if (q.qc_tier) t.push(`<span class="tag">tier ${esc(q.qc_tier)}</span>`);
   (q.qc_flags || []).forEach(f => t.push(`<span class="tag warn">${esc(f)}</span>`));
   if (st && st.times_answered) t.push(`<span class="tag ${st.wrong_rate >= 70 ? 'bad' : ''}">${st.wrong_rate}% wrong · ${st.times_answered}×</span>`);
+  const au = auditOf(q);
+  if (au) AUDIT_ASPECTS.forEach(([k]) => { if (au[k] === 'fail' || au[k] === 'warn') t.push(`<span class="tag ${au[k] === 'fail' ? 'bad' : 'warn'}" title="${esc(AUDIT_NAME[k])}">${k.toUpperCase()} ${au[k]}</span>`); });
   return t.join('');
+}
+
+/** Audit 9 aspek (QC_SOAL.md §7). question_audit is one-to-one, PostgREST may return an object or a 1-item array. */
+export const AUDIT_ASPECTS = [['a1', 'Coverage vs source'], ['a2', 'Difficulty'], ['a3', 'Duplicate'], ['a4', 'Single best answer'], ['a5', 'Distractors'], ['a6', 'Math / technical'], ['a7', 'Diagram / geometry'], ['a8', 'Key cross-check'], ['a9', 'Chapter balance']];
+const AUDIT_NAME = Object.fromEntries(AUDIT_ASPECTS);
+export const auditOf = (q) => Array.isArray(q?.question_audit) ? (q.question_audit[0] || null) : (q?.question_audit || null);
+export function auditPanel(q) {
+  const au = auditOf(q);
+  if (!au) return '<div class="note">Audit: not audited yet.</div>';
+  const cell = (k) => `<span class="tag ${au[k] === 'fail' ? 'bad' : au[k] === 'warn' ? 'warn' : au[k] === 'pass' ? 'ok' : 'mute'}" title="${esc(AUDIT_NAME[k])}">${k.toUpperCase()} ${esc(au[k] || '–')}</span>`;
+  return `<div class="note">Audit ${esc(au.run || '')}${au.objective ? ` · objective ${esc(au.objective)}` : ''}${au.difficulty_suggested ? ` · difficulty ${esc(au.difficulty_suggested)}` : ''}${au.action ? ` · ${esc(au.action)}` : ''}</div><div>${AUDIT_ASPECTS.map(([k]) => cell(k)).join('')}</div>`;
 }
 
 const field = (label, html) => `<label class="lbl">${label}</label>${html}`;
@@ -36,6 +49,7 @@ export function openEditor(q, { idx, stats } = {}) {
       <div class="top"><button class="back" data-x aria-label="Close">×</button><h2 style="font-size:22px">Edit question</h2></div>
       <div class="scroll no-tab"><div class="stack" style="gap:6px">
         <div class="note">${esc(chapterLabel(idx || {}, q.chapter_id))} · ${qTags(q, stats)}</div>
+        ${auditPanel(q)}
         ${stats?.times_answered ? `<div class="note">Answers so far: ${['A', 'B', 'C', 'D'].map(k => `${k} ${stats.choice_dist?.[k] ?? 0}`).join(' · ')} (key ${esc(q.answer_key)})</div>` : ''}
         ${field('Read-this-first text (context)', ta('e-ctx', q.context, 3))}
         ${field('Question', ta('e-stem', q.stem, 4))}

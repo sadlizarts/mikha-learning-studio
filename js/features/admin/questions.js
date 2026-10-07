@@ -2,9 +2,10 @@
 import { $, $$, esc, toast } from '../../ui.js';
 import { admin } from '../../store.js';
 import { catalog, chapterIndex } from '../../state.js';
-import { chapterOptions, chapterLabel, qTags, openEditor } from './common.js';
+import { chapterOptions, chapterLabel, qTags, openEditor, AUDIT_ASPECTS } from './common.js';
 
-const F = { chapterId: '', status: 'all', search: '', page: 0, mode: 'browse' };
+const F = { chapterId: '', status: 'all', search: '', page: 0, mode: 'browse', aspect: 'any', result: 'all' };
+const RESULTS = [['all', 'All'], ['issues', 'Warn or fail'], ['fail', 'Fail'], ['warn', 'Warn'], ['none', 'Not audited']];
 
 export async function renderQuestions(body) {
   const cat = await catalog();
@@ -20,6 +21,8 @@ export async function renderQuestions(body) {
       ${F.mode === 'browse' ? `<div class="grid2">
         <div><label class="lbl" for="q-st">Status</label><select id="q-st">${['all', 'active', 'inactive'].map(s => `<option ${s === F.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
         <div><label class="lbl" for="q-s">Search text</label><input type="search" id="q-s" value="${esc(F.search)}" placeholder="words in the question"></div>
+        <div><label class="lbl" for="q-aa">Audit aspect</label><select id="q-aa"><option value="any" ${F.aspect === 'any' ? 'selected' : ''}>Any aspect (A1–A8)</option>${AUDIT_ASPECTS.map(([k, n]) => `<option value="${k}" ${F.aspect === k ? 'selected' : ''}>${k.toUpperCase()} · ${esc(n)}</option>`).join('')}</select></div>
+        <div><label class="lbl" for="q-ar">Audit result</label><select id="q-ar">${RESULTS.map(([v, n]) => `<option value="${v}" ${F.result === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
       </div>` : '<p class="note" style="margin-top:6px">Questions Mikha answered at least 3 times, highest % wrong first.</p>'}
     </div>
     <div id="q-list"><div class="spin"></div></div>
@@ -27,6 +30,8 @@ export async function renderQuestions(body) {
   $$('[data-mode]', body).forEach(b => b.onclick = () => { F.mode = b.dataset.mode; F.page = 0; if (F.mode === 'missed') F.chapterId = ''; renderQuestions(body); });
   $('#q-ch').onchange = (e) => { F.chapterId = e.target.value; F.page = 0; list(idx); };
   if ($('#q-st')) $('#q-st').onchange = (e) => { F.status = e.target.value; F.page = 0; list(idx); };
+  if ($('#q-aa')) $('#q-aa').onchange = (e) => { F.aspect = e.target.value; F.page = 0; list(idx); };
+  if ($('#q-ar')) $('#q-ar').onchange = (e) => { F.result = e.target.value; F.page = 0; list(idx); };
   let t; if ($('#q-s')) $('#q-s').oninput = (e) => { clearTimeout(t); t = setTimeout(() => { F.search = e.target.value.trim(); F.page = 0; list(idx); }, 350); };
   list(idx);
 }
@@ -42,7 +47,7 @@ async function list(idx) {
       rows.sort((a, b) => order[a.id] - order[b.id]);
       stats = Object.fromEntries(mm.map(m => [m.question_id, m])); count = rows.length;
     } else {
-      ({ rows, count } = await admin.questions({ chapterId: F.chapterId, status: F.status, search: F.search, page: F.page, size: 40 }));
+      ({ rows, count } = await admin.questions({ chapterId: F.chapterId, status: F.status, search: F.search, page: F.page, size: 40, audit: { aspect: F.aspect, result: F.result } }));
       stats = await admin.questionStats(rows.map(r => r.id));
     }
     const pages = Math.max(1, Math.ceil(count / 40));
