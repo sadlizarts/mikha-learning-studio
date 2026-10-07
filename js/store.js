@@ -271,6 +271,8 @@ export async function stemHash(stem) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+const AUDIT_COLS = 'a1,a2,a3,a4,a5,a6,a7,a8,a9,objective,difficulty_suggested,action,run,audited_at';
+
 export const admin = {
   async students() {
     return run(sb.from('profiles').select('id, display_name, role').eq('role', 'student').order('created_at'));
@@ -312,8 +314,18 @@ export const admin = {
     await run(sb.from('import_batches').update({ status: 'rolled_back' }).eq('id', batchId));
     return { deleted: unused.length, deactivated: used.size };
   },
-  async questions({ chapterId, status = 'all', search = '', flagged = false, page = 0, size = 40 }) {
-    let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path, updated_at', { count: 'exact' });
+  /** audit: { aspect: 'any'|'a1'..'a9', result: 'all'|'issues'|'fail'|'warn'|'none' } (QC_SOAL.md §7) */
+  async questions({ chapterId, status = 'all', search = '', flagged = false, page = 0, size = 40, audit = null }) {
+    const A = audit && audit.result && audit.result !== 'all' ? audit : null;
+    const emb = A && A.result !== 'none' ? `question_audit!inner(${AUDIT_COLS})` : `question_audit(${AUDIT_COLS})`;
+    let q = sb.from('questions').select(`id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path, updated_at, ${emb}`, { count: 'exact' });
+    if (A && A.result === 'none') q = q.is('question_audit', null);
+    else if (A) {
+      const cols = A.aspect && A.aspect !== 'any' ? [A.aspect] : ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8'];
+      const vals = A.result === 'issues' ? ['warn', 'fail'] : [A.result];
+      if (cols.length === 1 && vals.length === 1) q = q.eq(`question_audit.${cols[0]}`, vals[0]);
+      else q = q.or(cols.flatMap(c => vals.map(v => `${c}.eq.${v}`)).join(','), { referencedTable: 'question_audit' });
+    }
     q = q.eq('is_quick_check', false);
     if (chapterId) q = q.eq('chapter_id', chapterId);
     if (status === 'active') q = q.eq('is_active', true);
@@ -337,7 +349,7 @@ export const admin = {
   },
   async questionsByIds(ids) {
     if (!ids.length) return [];
-    return run(sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path').in('id', ids));
+    return run(sb.from('questions').select(`id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, difficulty, is_active, source, qc_tier, qc_flags, lesson_anchor, lock_options, image_path, question_audit(${AUDIT_COLS})`).in('id', ids));
   },
   async usageCount(questionId) {
     const res = await sb.from('attempt_questions').select('question_id', { count: 'exact', head: true }).eq('question_id', questionId);
