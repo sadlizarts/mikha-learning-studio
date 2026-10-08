@@ -28,7 +28,9 @@ const splitRow = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|'
 
 /**
  * parseLesson(md) → { meta, greeting, sections[], quick[], anchors[], titles{}, images[], errors[], warnings[], words }
- * Each section: { title, anchor, blocks[] } where block = {t:'p'|'table'|'img'|'nib'|'trap'|'kw'|'ul'|'h3', ...}
+ * Each section: { title, anchor, blocks[] } where block = {t:'p'|'table'|'img'|'nib'|'trap'|'kw'|'ul'|'h3'|'dalil', ...}
+ * catatan (Agama): "> catatan: **Mazhab Syafi'i.** …" → a note beside the book's main text (blue box).
+ * dalil (Agama): "> dalil: Q.S. an-Nisā’/4: 59" then "> arab: …", "> latin: …", "> arti: …" lines → Arabic shown right-to-left.
  */
 export function parseLesson(md, { page = false } = {}) {
   const errors = [], warnings = [];
@@ -114,16 +116,33 @@ export function parseLesson(md, { page = false } = {}) {
       cur.blocks.push({ t: 'h3', title, anchor: a });
       continue;
     }
-    if ((m = t.match(/^>\s*(nib|trap)\s*:\s*(.*)$/i))) {
+    if ((m = t.match(/^>\s*dalil\s*:\s*(.*)$/i))) {
+      flush();
+      const d = { t: 'dalil', ref: m[1].trim(), arab: '', latin: '', arti: '' };
+      let last = null;
+      while (i + 1 < lines.length && /^>/.test(lines[i + 1].trim()) && !/^>\s*(nib|trap|dalil|catatan)\s*:/i.test(lines[i + 1].trim())) {
+        const x = lines[++i].trim().replace(/^>\s?/, '');
+        const km = x.match(/^(arab|latin|arti)\s*:\s*(.*)$/i);
+        if (km) { last = km[1].toLowerCase(); d[last] = km[2].trim(); }
+        else if (last && x.trim()) d[last] += ' ' + x.trim();
+      }
+      if (!d.ref) errors.push('A "> dalil:" block needs a reference, e.g. "> dalil: Q.S. an-Nisā’/4: 59".');
+      if (!d.arab && !d.arti) errors.push(`Dalil "${d.ref}": add "> arab:" and/or "> arti:" lines.`);
+      if (d.arab && (/[A-Za-z]/.test(d.arab) || !/[\u0600-\u06FF]/.test(d.arab))) errors.push(`Dalil "${d.ref}": "> arab:" must be Arabic script only.`);
+      if (/\{\{/.test(d.arab + d.arti)) errors.push(`Dalil "${d.ref}": unresolved {{…}} placeholder.`);
+      if (!cur) warnings.push('A dalil before the first section was ignored.'); else cur.blocks.push(d);
+      continue;
+    }
+    if ((m = t.match(/^>\s*(nib|trap|catatan)\s*:\s*(.*)$/i))) {
       flush();
       let text = m[2];
-      while (i + 1 < lines.length && /^>/.test(lines[i + 1].trim()) && !/^>\s*(nib|trap)\s*:/i.test(lines[i + 1].trim())) text += ' ' + lines[++i].trim().replace(/^>\s?/, '');
+      while (i + 1 < lines.length && /^>/.test(lines[i + 1].trim()) && !/^>\s*(nib|trap|dalil|catatan)\s*:/i.test(lines[i + 1].trim())) text += ' ' + lines[++i].trim().replace(/^>\s?/, '');
       const kind = m[1].toLowerCase();
       if (!cur) { if (kind === 'nib' && !greeting) greeting = text; else warnings.push('A callout before the first section was ignored.'); continue; }
       cur.blocks.push({ t: kind, text });
       continue;
     }
-    if (/^>/.test(t)) { flush(); warnings.push(`Plain quote shown as a paragraph: "${t.slice(0, 40)}…" (use "> nib:" or "> trap:").`); if (cur) cur.blocks.push({ t: 'p', text: t.replace(/^>\s?/, '') }); continue; }
+    if (/^>/.test(t)) { flush(); warnings.push(`Plain quote shown as a paragraph: "${t.slice(0, 40)}…" (use "> nib:", "> trap:", "> catatan:" or "> dalil:").`); if (cur) cur.blocks.push({ t: 'p', text: t.replace(/^>\s?/, '') }); continue; }
     if ((m = t.match(/^::keywords\s+(.+)$/i))) {
       flush(); if (cur) cur.blocks.push({ t: 'kw', words: m[1].split(/\s*·\s*|\s*,\s*/).map(s => s.trim()).filter(Boolean) });
       continue;
@@ -206,7 +225,7 @@ export function parseLesson(md, { page = false } = {}) {
     const missing = listed.filter(a => !anchors.includes(a));
     if (missing.length) errors.push(`Frontmatter lists anchor(s) with no heading: ${missing.join(', ')}. Add "## … {#${missing[0]}}" or "### … {#${missing[0]}}".`);
   }
-  const words = intro.join(' ').split(/\s+/).filter(Boolean).length + all.reduce((n, b) => n + ((b.text || '') + ' ' + (b.items || []).join(' ') + ' ' + (b.body || []).flat().join(' ')).split(/\s+/).filter(Boolean).length, 0);
+  const words = intro.join(' ').split(/\s+/).filter(Boolean).length + all.reduce((n, b) => n + ((b.text || b.arti || '') + ' ' + (b.items || []).join(' ') + ' ' + (b.body || []).flat().join(' ')).split(/\s+/).filter(Boolean).length, 0);
   const readMinutes = +meta.read_minutes || Math.max(3, Math.round(words / 160));
   return { meta, greeting, intro: intro.join(' '), sections, quick: qc, anchors, titles, images: [...new Set(images)], errors, warnings, words, readMinutes };
 }
@@ -222,6 +241,8 @@ export function renderSections(p, img = () => null) {
       case 'h3': return `<h4 class="lsub"${b.anchor ? ` id="l-${esc(b.anchor)}" data-anchor="${esc(b.anchor)}"` : ''}>${inline(b.title)}</h4>`;
       case 'nib': return `<div class="callout nib"><b>Nib says:</b> ${inline(b.text)}</div>`;
       case 'trap': return `<div class="callout trap"><b>Trap!</b> ${inline(b.text)}</div>`;
+      case 'catatan': return `<div class="callout alt"><b>Catatan:</b> ${inline(b.text)}</div>`;
+      case 'dalil': return `<figure class="dalil">${b.arab ? `<p class="arab" dir="rtl" lang="ar">${esc(b.arab)}</p>` : ''}${b.latin ? `<p class="latin">${inline(b.latin)}</p>` : ''}${b.arti ? `<p class="arti">${inline(b.arti)}</p>` : ''}<figcaption>${inline(b.ref)}</figcaption></figure>`;
       case 'kw': return `<div class="keyrow" aria-label="Key words">${b.words.map(w => `<span class="kw">${esc(w)}</span>`).join('')}</div>`;
       case 'ul': return `<ul class="lul">${b.items.map(x => `<li>${inline(x)}</li>`).join('')}</ul>`;
       case 'ol': return `<ol class="lul lol">${b.items.map(x => `<li>${inline(x)}</li>`).join('')}</ol>`;
