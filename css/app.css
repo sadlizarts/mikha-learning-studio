@@ -305,6 +305,12 @@ html.wide #app{max-width:980px}
 .callout{border:2px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px;font-weight:700;color:var(--ink);margin:6px 0 12px;background:var(--card);line-height:1.45;max-width:65ch}
 .callout.trap{border-color:var(--bad);background:var(--bad-soft)}
 .callout.nib{border-color:var(--volt);background:var(--card);border-left-width:8px}
+.callout.alt{border-color:var(--hint);background:var(--hint-soft);font-weight:600}
+.dalil{margin:8px 0 14px;padding:12px 14px 10px;border:2px solid var(--sub-aga);border-radius:12px;background:var(--card);max-width:65ch}
+.dalil .arab{font-family:'Amiri Quran','Amiri','Scheherazade New','Geeza Pro','Noto Naskh Arabic',serif;font-weight:400;font-size:26px;line-height:2.15;text-align:right;color:var(--ink);margin:0 0 8px;max-width:none}
+.dalil .latin{font-style:italic;font-size:15px;color:var(--ink-2);margin:0 0 6px}
+.dalil .arti{font-size:15.5px;color:var(--ink);margin:0 0 6px}
+.dalil figcaption{font-size:13px;font-weight:900;color:var(--sub-aga)}
 .keyrow{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
 .kw{font-size:13px;font-weight:900;padding:4px 10px;border-radius:999px;border:2px solid var(--line);background:var(--paper-2);color:var(--ink)}
 .recap{overflow-x:auto;margin:6px 0 12px;-webkit-overflow-scrolling:touch}
