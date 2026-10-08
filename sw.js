@@ -1,5 +1,5 @@
 // Service worker: caches the app shell only. Never caches *.supabase.co responses (CLAUDE.md rule 5).
-const VERSION = 'mls-v1.4.1';
+const VERSION = 'mls-v1.5.0';
 const KEEP = ['mls-lessons']; // per-user lesson pictures (cleared on sign-out by the app)
 const SHELL = [
   './', './index.html', './manifest.json',
@@ -11,7 +11,7 @@ const SHELL = [
   './fonts/lilita-one-latin-400-normal.woff2', './fonts/lilita-one-latin-ext-400-normal.woff2',
   './fonts/nunito-latin-500-normal.woff2', './fonts/nunito-latin-700-normal.woff2', './fonts/nunito-latin-800-normal.woff2', './fonts/nunito-latin-900-normal.woff2',
   './fonts/nunito-latin-ext-500-normal.woff2', './fonts/nunito-latin-ext-700-normal.woff2', './fonts/nunito-latin-ext-800-normal.woff2', './fonts/nunito-latin-ext-900-normal.woff2',
-  './fonts/nunito-latin-700-italic.woff2',
+  './fonts/nunito-latin-700-italic.woff2', './fonts/amiri-quran-arabic-400-normal.woff2',
   './icons/favicon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 
