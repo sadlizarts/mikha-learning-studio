@@ -160,5 +160,21 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <noscript><p style="padding:24px;font-family:sans-serif">Mikha Learning Studio needs JavaScript turned on.</p></noscript>
+<script>
+/* Boot watchdog: if the app has not started after 12 s (e.g. a half-updated cache right after a release), offer a clean reload. */
+setTimeout(function () {
+  var boot = document.getElementById('s-boot');
+  if (!boot || !boot.classList.contains('active')) return;
+  boot.innerHTML = '<div class="loading"><div style="text-align:center;max-width:280px"><p style="font-weight:800;margin-bottom:12px">The studio is taking too long to open.</p><button class="btn primary block" id="bootfix">Reload the app</button></div></div>';
+  document.getElementById('bootfix').onclick = function () {
+    var done = function () { location.reload(); };
+    if (!window.caches) return done();
+    caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf('mls-v') === 0; }).map(function (k) { return caches.delete(k); })); })
+      .then(function () { return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : []; })
+      .then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+      .then(done, done);
+  };
+}, 12000);
+</script>
 </body>
 </html>
