@@ -77,6 +77,14 @@ export async function loadCatalog(userId) {
 
 /* ---------------- home / history ---------------- */
 export async function loadProgress() { return run(sb.rpc('my_progress')); }
+/** Same shape as my_progress() for another user (admin monitor; RLS lets admin read user_progress). */
+export async function progressOf(userId) {
+  const rows = await run(sb.from('user_progress').select('xp_total, current_streak, best_streak, last_completed_date').eq('user_id', userId).limit(1));
+  const p = rows[0] || {};
+  const yest = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date(Date.now() - 86400000));
+  return { xp_total: p.xp_total || 0, best_streak: p.best_streak || 0, last_completed_date: p.last_completed_date || null,
+    current_streak: p.last_completed_date && String(p.last_completed_date) >= yest ? (p.current_streak || 0) : 0 };
+}
 
 export async function abandonStale() {
   try { await run(sb.rpc('abandon_stale_attempts')); } catch { /* non-fatal */ }
@@ -178,7 +186,7 @@ export const pageForAnchor = (entry, anchor) => (!anchor || (entry?.lessonAnchor
   : entry?.pages?.find(p => (p.anchors || []).includes(anchor))?.slug || null;
 export async function myLessonReads(userId) {
   try {
-    const rows = await run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, quick_check_score, quick_check_total, pages_read').eq('user_id', userId));
+    const rows = await run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, last_read_at, quick_check_score, quick_check_total, pages_read').eq('user_id', userId));
     return Object.fromEntries(rows.map(r => [r.chapter_id, r]));
   } catch { return {}; }
 }

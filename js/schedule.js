@@ -55,8 +55,15 @@ export function readiness(a, statBy) {
 /** #/pick target: linked chapters, else the subject tab. */
 export const practiceHash = (a) => a.chapter_ids?.length ? `#/pick/${a.chapter_ids.join(',')}` : `#/pick/sub:${a.subject_id}`;
 
+/** "Wed 14 – Sun 18 Oct": the 5 calendar days before the assessment week starts. */
+export function planWindow(a) {
+  const s = toUTC(a.date_start);
+  const iso = (t) => new Date(t).toISOString().slice(0, 10);
+  return dateRange({ date_start: iso(s - 5 * DAY), date_end: iso(s - DAY) });
+}
+
 /** One assessment row (Home card + Schedule screen). */
-export function assessmentRow(a, { idx = {}, statBy = {}, today = jakartaDate(), compact = false } = {}) {
+export function assessmentRow(a, { idx = {}, statBy = {}, today = jakartaDate(), compact = false, readonly = false } = {}) {
   const k = KIND[a.kind] || KIND.teacher_paced;
   const m = subjectMeta({ name: a.subject_name });
   const p = phase(a, today);
@@ -64,13 +71,14 @@ export function assessmentRow(a, { idx = {}, statBy = {}, today = jakartaDate(),
   const chapLine = chapters.length ? chapters.map(c => `${String(c.code).split('-').pop()} ${c.name}`).join(' · ') : (k.practice ? 'Chapters not set yet' : '');
   const r = k.practice ? readiness(a, statBy) : null;
   const meter = r ? `<div class="ready" title="Average of the last 30 answers in these chapters"><i style="--p:${r.pct}%" class="${r.pct >= 80 ? 'ok' : r.pct >= 65 ? 'mid' : 'low'}"></i></div><div class="note num">Ready ${r.pct}% · ${r.practised}/${r.total} chapters practised</div>` : '';
-  const btn = k.practice && p !== 'past' ? `<button class="btn small ${p === 'now' || p === 'soon' ? 'primary' : ''}" data-nav="${practiceHash(a)}">Practice</button>` : '';
+  const btn = !readonly && k.practice && p !== 'past' ? `<button class="btn small ${p === 'now' || p === 'soon' ? 'primary' : ''}" data-nav="${practiceHash(a)}">Practice</button>` : '';
   return `<div class="asm ${k.cls} ${p}" style="--c:${m.color}">
     <div class="when"><b class="num">${esc(countdown(a, today))}</b><span>${esc(dateRange(a))}</span></div>
     <div class="grow">
       <div class="t"><span class="sub">${esc(m.short)}</span> ${esc(a.title || k.label)}</div>
       <div class="note">${esc(k.sub)}${chapLine && !compact ? ` · ${esc(chapLine)}` : ''}</div>
       ${a.notes && !compact ? `<div class="note">${esc(a.notes)}</div>` : ''}
+      ${k.practice && (p === 'next' || p === 'soon') ? `<div class="note planline">Study plan H-5 → H-1: ${esc(planWindow(a))}</div>` : ''}
       ${meter}
     </div>
     ${btn}
