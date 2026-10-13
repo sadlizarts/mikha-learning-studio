@@ -465,10 +465,20 @@ export const admin = {
     const { data } = await sb.storage.from('question-images').createSignedUrl(LESSON_DIR + name, 3600);
     return data?.signedUrl || null;
   },
+  async addAssessment(row) { return run(sb.from('assessments').insert(row)); },
+  async updateAssessment(id, patch) { return run(sb.from('assessments').update(patch).eq('id', id)); },
   async lessonReads(studentId) {
     return run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, last_read_at, quick_check_score, quick_check_total, pages_read').eq('user_id', studentId));
   },
 };
+
+/* school assessment calendar (EASE sheet). Students see active rows; admin can ask for all. */
+export async function loadAssessments({ all = false } = {}) {
+  let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, subjects(name)').order('date_start').order('subject_id');
+  if (!all) q = q.eq('is_active', true);
+  const rows = await run(q);
+  return rows.map(r => ({ ...r, subject_name: r.subjects?.name || '', chapter_ids: r.chapter_ids || [] }));
+}
 
 /* student side: active goals ("Today's mission from Dad") */
 export async function myGoals(userId) {

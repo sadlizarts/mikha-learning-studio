@@ -12,6 +12,7 @@ import { renderHistory } from './features/history.js';
 import { renderProgress } from './features/progress.js';
 import { renderAdmin } from './features/admin/index.js';
 import { renderLearn, renderLesson } from './features/learn.js';
+import { renderSchedule } from './features/schedule.js';
 
 window.MLS = { app };
 
@@ -42,6 +43,7 @@ async function boot() {
   route('admin', renderAdmin);
   route('learn', renderLearn);
   route('lesson', renderLesson);
+  route('schedule', renderSchedule);
 
   startRouter();
 }
