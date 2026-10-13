@@ -1,9 +1,11 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
 import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast } from '../ui.js';
-import { loadProgress, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt, myGoals, loadAssessments } from '../store.js';
+import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt, myGoals, loadAssessments, myLessonReads } from '../store.js';
+import { studyPlan } from '../plan.js';
+import { lessonsMeta } from './learn.js';
 import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS } from '../schedule.js';
 import { goalStatus } from '../goals.js';
-import { app, catalog, chapterIndex, firstName } from '../state.js';
+import { app, catalog, chapterIndex, firstName, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 
 export function chaptersLabel(ids, idx) {
@@ -41,10 +43,13 @@ export async function renderHome() {
   show('home');
   const body = $('#home-body');
   if (!body.dataset.ready) body.innerHTML = `<div class="loading" style="height:60vh"><div><div class="spin" style="margin:0 auto 12px"></div>Loading…</div></div>`;
-  let cat, prog, inprog, done, goals, asms;
+  const viewing = !!app.viewAs;            // admin sees the student's Home, read-only
+  const vid = viewerId();
+  let cat, prog, inprog, done, goals, asms, reads, lessons;
   try {
-    await abandonStale();
-    [cat, prog, inprog, done, goals, asms] = await Promise.all([catalog(), loadProgress(), inProgressAttempt(app.user.id), completedAttempts(app.user.id, 40), myGoals(app.user.id), loadAssessments().catch(() => [])]);
+    if (!viewing) await abandonStale();
+    [cat, prog, inprog, done, goals, asms, reads, lessons] = await Promise.all([catalog(), viewing ? progressOf(vid) : loadProgress(), inProgressAttempt(vid), completedAttempts(vid, 40), myGoals(vid),
+      loadAssessments().catch(() => []), myLessonReads(vid), lessonsMeta().catch(() => ({}))]);
   } catch (e) {
     body.innerHTML = `<div class="panel sunk empty" style="margin-top:40px"><p>${esc(e.message)}</p><button class="btn block" style="margin-top:12px" data-nav="#/home">Try again ↻</button></div>`;
     return;
@@ -67,11 +72,24 @@ export async function renderHome() {
   const nextOne = (asms || []).find(a => a.date_start > today && !soon.includes(a));
   const comingUp = (asms || []).length ? `<div class="panel upnext ${urgent ? 'alert' : ''}">
       <div class="row between" style="margin-bottom:4px"><div class="eyebrow">${urgent ? 'Heads up · assessment soon' : `Coming up · next ${LOOKAHEAD_DAYS} days`}</div><button class="btn ghost xs" data-nav="#/schedule">Calendar</button></div>
-      ${soon.length ? `<div class="asm-list">${soon.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today })).join('')}</div>`
+      ${soon.length ? `<div class="asm-list">${soon.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today, readonly: viewing })).join('')}</div>`
         : `<p class="note" style="font-size:14px">No assessments in the next ${LOOKAHEAD_DAYS} days.${nextOne ? ` Next: <b>${esc(nextOne.subject_name)}</b> · ${esc((KIND[nextOne.kind] || {}).label || '')} · ${esc(dateRange(nextOne))}.` : ''}</p>`}
     </div>` : '';
 
-  const resume = inprog ? `
+  const plan = studyPlan(asms || [], { cat, idx, attempts: done, reads, lessons, today });
+  const planDone = plan.filter(p => p.done).length;
+  const planCard = plan.length ? `<div class="panel plan">
+      <div class="row between" style="margin-bottom:4px"><div class="eyebrow">Study plan · today</div><span class="note num">${planDone}/${plan.length} done</span></div>
+      ${plan.map(p => `<div class="item">
+        <div class="hday num">H-${p.daysLeft}</div>
+        <div class="grow"><div class="pt">${esc(p.title)}</div><div class="note">${esc(p.detail)}</div></div>
+        ${p.done ? '<span class="chip" style="--c:var(--ok)"><span class="dot"></span>Done</span>'
+          : viewing || !p.action ? '<span class="chip" style="--c:var(--volt-2)"><span class="dot"></span>To do</span>'
+          : `<button class="btn small primary" data-nav="${p.action.hash}">${esc(p.action.label)}</button>`}
+      </div>`).join('')}
+    </div>` : '';
+
+  const resume = viewing ? (inprog ? `<div class="panel sunk"><div class="eyebrow">Practice in progress</div><div style="font-weight:900;color:var(--ink)">${esc(chaptersLabel(inprog.chapter_ids, idx))} · <span class="num">${inprog.answered_count}/${inprog.total_questions}</span> answered</div></div>` : '') : inprog ? `
     <div class="panel cta resume">
       <div class="lines"></div>
       <div class="eyebrow">Practice in progress</div>
@@ -80,7 +98,8 @@ export async function renderHome() {
       <button class="btn primary lg block" data-nav="#/quiz/${inprog.id}">Continue →</button>
       <button class="btn ghost block" id="freshbtn" style="margin-top:8px;color:var(--volt-ink);border-color:var(--volt-ink)">Start fresh instead</button>
     </div>` : '';
-  const cta = `
+  const cta = viewing ? `<div class="panel sunk viewbar"><div class="grow"><div class="eyebrow">Dad's view</div><div class="note" style="font-size:13.5px">You are watching ${esc(app.viewAs.name)}'s studio. Your own practices don't count for ${esc(app.viewAs.name.split(' ')[0])}.</div></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn small" data-nav="#/admin/student">Details</button><button class="btn small" data-nav="#/admin/schedule">Schedule</button><button class="btn small ghost" data-nav="#/pick">Try a practice</button></div></div>` : `
     <div class="panel ${inprog ? '' : 'cta'}">
       ${inprog ? '' : '<div class="lines"></div>'}
       <div class="eyebrow">${inprog ? 'Or' : 'Ready?'}</div>
@@ -90,7 +109,7 @@ export async function renderHome() {
 
   body.innerHTML = `<div class="stack">
     <div class="row between greet">
-      <div><div class="eyebrow">${esc(prettyDay())}</div><h1>Hey ${esc(firstName())}!</h1></div>
+      <div><div class="eyebrow">${esc(prettyDay())}${viewing ? ' · Dad\'s view' : ''}</div><h1>${viewing ? `${esc(app.viewAs.name.split(' ')[0])}'s studio` : `Hey ${esc(firstName())}!`}</h1></div>
       <div class="mascot" id="m-home"></div>
     </div>
     <div class="statrow">
@@ -108,6 +127,7 @@ export async function renderHome() {
       </div>
     </div>
     ${comingUp}
+    ${planCard}
     ${mission}
     ${resume}
     ${cta}

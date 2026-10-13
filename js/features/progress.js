@@ -1,7 +1,7 @@
 // Progress (PRD §8.1–8.2b, FR-33/34, DESIGN §5.6): score trend, Needs work (Read first / Practice), all chapters, Strong.
 import { $, esc, subjectMeta, shortCode, trendSVG } from '../ui.js';
 import { completedAttempts } from '../store.js';
-import { app, catalog, chapterIndex } from '../state.js';
+import { catalog, chapterIndex, viewerId } from '../state.js';
 import { show } from '../router.js';
 import { lessonsMeta } from './learn.js';
 
@@ -11,7 +11,7 @@ export async function renderProgress() {
   body.innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
   let cat, done = [], lidx = {};
   try {
-    [cat, done, lidx] = await Promise.all([catalog(true), completedAttempts(app.user.id, 40), lessonsMeta().catch(() => ({}))]);
+    [cat, done, lidx] = await Promise.all([catalog(true), completedAttempts(viewerId(), 40), lessonsMeta().catch(() => ({}))]);
   } catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
   const idx = chapterIndex(cat);
   // thresholds live in app_settings (admin-editable); defaults match PRD §8.2/8.2b

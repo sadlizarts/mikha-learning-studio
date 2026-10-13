@@ -5,7 +5,7 @@
 import { $, $$, esc, setMascot, subjectMeta, shortCode, toast, reducedMotion } from '../ui.js';
 import { lessonIndex, myLessonReads, loadLesson, lessonImages, completeLesson, loadPage, markPage, pageForAnchor } from '../store.js';
 import { parseLesson, renderSections, inline } from '../lesson-md.js';
-import { app, catalog, chapterIndex } from '../state.js';
+import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 
 let learnSub = null;
@@ -28,7 +28,7 @@ export async function renderLearn() {
   const body = $('#learn-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:40vh"><div class="spin"></div></div>';
   let cat, lidx, reads;
-  try { [cat, lidx, reads] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(app.user.id)]); }
+  try { [cat, lidx, reads] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(viewerId())]); }
   catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}<button class="btn block" style="margin-top:12px" data-nav="#/learn">Try again ↻</button></div>`; return; }
   const R = cat.rules || {};
   if (!learnSub || !cat.subjects.some(s => s.id === learnSub)) {
@@ -76,7 +76,7 @@ async function mountLesson(root, chapterId, { inSheet = false, anchor = null, on
   try { [res, cat, lidx] = await Promise.all([loadLesson(chapterId), catalog().catch(() => null), lessonsMeta().catch(() => ({}))]); }
   catch (e) { root.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return null; }
   if (!res) { root.innerHTML = '<div class="panel sunk empty">This lesson is not published yet.</div>'; return null; }
-  try { reads = await myLessonReads(app.user.id); } catch { /* optional */ }
+  try { reads = await myLessonReads(viewerId()); } catch { /* optional */ }
   const ch = cat ? chapterIndex(cat)[chapterId] : null;
   const m = subjectMeta(ch?.subject);
   const p = parseLesson(res.lesson.body_md);

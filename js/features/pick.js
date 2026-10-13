@@ -93,7 +93,8 @@ async function start() {
 }
 
 /** #/pick/<chapterId> (from Learn / Progress) preselects just that chapter */
-export async function renderPick(preset) {
+export async function renderPick(arg) {
+  const [preset, wantLen] = String(arg || '').split('~');
   show('pick');
   $('#chaplist').innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
   try { cat = await catalog(true); } catch (e) { $('#chaplist').innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
@@ -115,6 +116,7 @@ export async function renderPick(preset) {
     const firstSel = cat.chapters.find(c => sel.has(c.chapter_id));
     curSub = firstSel ? firstSel.subject_id : cat.subjects[0]?.id;
   }
+  if (wantLen === '50' || wantLen === '30') len = +wantLen;
   setLen(len);
   renderSubtabs(); renderChapters();
 }
