@@ -99,7 +99,7 @@ export async function renderPick(preset) {
   try { cat = await catalog(true); } catch (e) { $('#chaplist').innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
   if (preset && preset.startsWith('sub:')) {          // from the schedule: subject tab, no chapters linked yet
     const sid = preset.slice(4);
-    if (cat.subjects.some(s => s.id === sid)) curSub = sid;
+    if (cat.subjects.some(s => s.id === sid)) { curSub = sid; sel.clear(); }
     history.replaceState(null, '', '#/pick');
   } else if (preset) {                                 // one chapter, or several (comma list) from the schedule
     const ids = preset.split(',').filter(id => cat.chapters.some(c => c.chapter_id === id && avail(c)));
