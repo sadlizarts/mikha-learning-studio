@@ -383,3 +383,12 @@ html.wide .split{grid-template-columns:1fr 1fr}
 .legend .tp{background:color-mix(in srgb,var(--sub-math) 16%,var(--card))} .legend .sy{background:var(--ok-soft)} .legend .eg{background:var(--hint-soft)}
 .month{font-size:20px}
 .tbl tr.off td{opacity:.5}
+
+/* ---------- study plan (H-5 … H-1) + Dad's view ---------- */
+.plan{border-left:8px solid var(--volt)}
+.plan .item{display:flex;align-items:center;gap:12px;padding:9px 0}
+.plan .item + .item{border-top:2px dashed var(--paper-2)}
+.plan .hday{flex:none;width:46px;height:46px;border:2px solid var(--line);border-radius:12px;background:var(--volt);color:var(--volt-ink);display:grid;place-items:center;font-family:var(--display);font-size:17px}
+.plan .pt{font-weight:900;color:var(--ink);font-size:15.5px;line-height:1.25}
+.planline{color:var(--ink-2)}
+.viewbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border-left:8px solid var(--ink)}
