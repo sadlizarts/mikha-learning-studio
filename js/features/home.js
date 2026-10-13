@@ -1,6 +1,7 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
 import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast } from '../ui.js';
-import { loadProgress, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt, myGoals } from '../store.js';
+import { loadProgress, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt, myGoals, loadAssessments } from '../store.js';
+import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS } from '../schedule.js';
 import { goalStatus } from '../goals.js';
 import { app, catalog, chapterIndex, firstName } from '../state.js';
 import { show, navigate } from '../router.js';
@@ -40,10 +41,10 @@ export async function renderHome() {
   show('home');
   const body = $('#home-body');
   if (!body.dataset.ready) body.innerHTML = `<div class="loading" style="height:60vh"><div><div class="spin" style="margin:0 auto 12px"></div>Loading…</div></div>`;
-  let cat, prog, inprog, done, goals;
+  let cat, prog, inprog, done, goals, asms;
   try {
     await abandonStale();
-    [cat, prog, inprog, done, goals] = await Promise.all([catalog(), loadProgress(), inProgressAttempt(app.user.id), completedAttempts(app.user.id, 40), myGoals(app.user.id)]);
+    [cat, prog, inprog, done, goals, asms] = await Promise.all([catalog(), loadProgress(), inProgressAttempt(app.user.id), completedAttempts(app.user.id, 40), myGoals(app.user.id), loadAssessments().catch(() => [])]);
   } catch (e) {
     body.innerHTML = `<div class="panel sunk empty" style="margin-top:40px"><p>${esc(e.message)}</p><button class="btn block" style="margin-top:12px" data-nav="#/home">Try again ↻</button></div>`;
     return;
@@ -60,6 +61,15 @@ export async function renderHome() {
   const mission = missions.length ? `<div class="panel mission"><div class="eyebrow">Today's mission from Dad</div>${missions.map(m =>
     `<div class="item"><div class="grow"><div style="font-weight:900;color:var(--ink);font-size:16px">${esc(m.title)}</div><div class="note">${esc(m.detail)}</div></div>
      <span class="chip" style="--c:${chipFor[m.status][1]}"><span class="dot"></span>${chipFor[m.status][0]}</span></div>`).join('')}</div>` : '';
+
+  const soon = upcoming(asms || []);
+  const urgent = soon.some(a => ['now', 'soon'].includes(phase(a, today)));
+  const nextOne = (asms || []).find(a => a.date_start > today && !soon.includes(a));
+  const comingUp = (asms || []).length ? `<div class="panel upnext ${urgent ? 'alert' : ''}">
+      <div class="row between" style="margin-bottom:4px"><div class="eyebrow">${urgent ? 'Heads up · assessment soon' : `Coming up · next ${LOOKAHEAD_DAYS} days`}</div><button class="btn ghost xs" data-nav="#/schedule">Calendar</button></div>
+      ${soon.length ? `<div class="asm-list">${soon.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today })).join('')}</div>`
+        : `<p class="note" style="font-size:14px">No assessments in the next ${LOOKAHEAD_DAYS} days.${nextOne ? ` Next: <b>${esc(nextOne.subject_name)}</b> · ${esc((KIND[nextOne.kind] || {}).label || '')} · ${esc(dateRange(nextOne))}.` : ''}</p>`}
+    </div>` : '';
 
   const resume = inprog ? `
     <div class="panel cta resume">
@@ -97,6 +107,7 @@ export async function renderHome() {
         <div class="note num" style="margin-top:6px">${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
       </div>
     </div>
+    ${comingUp}
     ${mission}
     ${resume}
     ${cta}

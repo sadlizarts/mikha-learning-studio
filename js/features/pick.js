@@ -97,9 +97,16 @@ export async function renderPick(preset) {
   show('pick');
   $('#chaplist').innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
   try { cat = await catalog(true); } catch (e) { $('#chaplist').innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
-  if (preset && cat.chapters.some(c => c.chapter_id === preset && avail(c))) {
-    sel.clear(); sel.add(preset);
-    curSub = cat.chapters.find(c => c.chapter_id === preset).subject_id;
+  if (preset && preset.startsWith('sub:')) {          // from the schedule: subject tab, no chapters linked yet
+    const sid = preset.slice(4);
+    if (cat.subjects.some(s => s.id === sid)) curSub = sid;
+    history.replaceState(null, '', '#/pick');
+  } else if (preset) {                                 // one chapter, or several (comma list) from the schedule
+    const ids = preset.split(',').filter(id => cat.chapters.some(c => c.chapter_id === id && avail(c)));
+    if (ids.length) {
+      sel.clear(); ids.forEach(id => sel.add(id));
+      curSub = cat.chapters.find(c => c.chapter_id === ids[0]).subject_id;
+    }
     history.replaceState(null, '', '#/pick');
   }
   // drop remembered chapters that no longer exist or are empty
