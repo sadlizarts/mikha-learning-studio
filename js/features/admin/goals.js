@@ -46,6 +46,6 @@ export async function renderGoals(body) {
   };
   $('#g-chap').onclick = async () => {
     const due = $('#g-due').value;
-    try { await admin.addGoal({ student_id: student.id, type: 'chapter', chapter_id: $('#g-ch').value, target_accuracy: Math.min(100, Math.max(50, +$('#g-acc').value || 80)), due_date: due || null, created_by: app.user.id }); toast('Chapter target added.'); renderGoals(body); } catch (e) { toast(e.message, 4000); }
+    try { await admin.addGoal({ student_id: student.id, type: 'chapter_deadline', chapter_id: $('#g-ch').value, target_accuracy: Math.min(100, Math.max(50, +$('#g-acc').value || 80)), due_date: due || null, created_by: app.user.id }); toast('Chapter target added.'); renderGoals(body); } catch (e) { toast(e.message, 4000); }
   };
 }
