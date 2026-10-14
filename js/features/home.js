@@ -1,6 +1,6 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
 import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast } from '../ui.js';
-import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, abandonAttempt, myGoals, loadAssessments, myLessonReads } from '../store.js';
+import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, changePassword, abandonAttempt, myGoals, loadAssessments, myLessonReads } from '../store.js';
 import { studyPlan } from '../plan.js';
 import { lessonsMeta } from './learn.js';
 import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS } from '../schedule.js';
@@ -138,12 +138,13 @@ export async function renderHome() {
     </div>
     <div class="row between" style="margin-top:6px">
       <span class="note">Signed in as ${esc(app.profile?.display_name || '')}${app.profile?.role === 'admin' ? ' · admin' : ''}</span>
-      <span class="row" style="gap:8px">${app.profile?.role === 'admin' ? '<button class="btn ghost small" data-nav="#/admin/import">Admin</button>' : ''}<button class="btn ghost small" id="signout">Sign out</button></span>
+      <span class="row" style="gap:8px">${app.profile?.role === 'admin' ? '<button class="btn ghost small" data-nav="#/admin/import">Admin</button>' : ''}<button class="btn ghost small" id="pwbtn">Password</button><button class="btn ghost small" id="signout">Sign out</button></span>
     </div>
   </div>`;
   body.dataset.ready = '1';
   setMascot($('#m-home'), 'neutral');
 
+  $('#pwbtn').onclick = () => passwordSheet();
   $('#signout').onclick = async () => {
     const ok = await sheet({ title: 'Sign out?', body: 'You will need your email and password to come back in.', actions: [{ label: 'Stay signed in', value: false }, { label: 'Sign out', value: true, cls: 'danger' }] });
     if (ok) await signOut();
@@ -153,5 +154,29 @@ export async function renderHome() {
     const ok = await sheet({ title: 'Start fresh?', body: `Your ${inprog.answered_count} answers still count for your chapter stats, but this practice won't get a score.`, actions: [{ label: 'Keep it', value: false }, { label: 'Start fresh', value: true, cls: 'danger' }] });
     if (!ok) return;
     try { await abandonAttempt(inprog.id); navigate('#/pick'); } catch (e) { toast(e.message, 3000); }
+  };
+}
+
+/** Change own password (FR-04). The new password is typed by the user; the app never shows or stores it. */
+function passwordSheet() {
+  const wrap = document.createElement('div');
+  wrap.className = 'sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Change password');
+  wrap.innerHTML = `<div class="panel"><h3>Change password</h3>
+    <div class="stack" style="gap:10px;margin:8px 0"><div class="field"><label for="pw1">New password (8+ characters)</label><input type="password" id="pw1" autocomplete="new-password" minlength="8"></div>
+    <div class="field"><label for="pw2">Type it again</label><input type="password" id="pw2" autocomplete="new-password" minlength="8"></div></div>
+    <p class="note" id="pwmsg" style="min-height:1.2em"></p>
+    <div class="stack" style="gap:10px"><button class="btn block primary" id="pwsave">Save new password</button><button class="btn block" id="pwcancel">Cancel</button></div></div>`;
+  const close = () => wrap.remove();
+  wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
+  $('#app').appendChild(wrap);
+  $('#pwcancel', wrap).onclick = close;
+  $('#pw1', wrap).focus();
+  $('#pwsave', wrap).onclick = async () => {
+    const a = $('#pw1', wrap).value, b = $('#pw2', wrap).value, msg = $('#pwmsg', wrap);
+    if (a.length < 8) { msg.textContent = 'Use at least 8 characters.'; return; }
+    if (a !== b) { msg.textContent = 'The two passwords are not the same.'; return; }
+    const btn = $('#pwsave', wrap); btn.disabled = true; msg.textContent = 'Saving…';
+    try { await changePassword(a); close(); toast('Password changed. Use the new one next time you sign in.', 3000); }
+    catch (e) { btn.disabled = false; msg.textContent = e.message; }
   };
 }
