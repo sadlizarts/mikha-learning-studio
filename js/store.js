@@ -345,6 +345,20 @@ export const admin = {
     if (res.error) throw toAppError(res.error);
     return { rows: res.data, count: res.count };
   },
+  /** Read-only viewer (Admin → Viewer). kind: 'active' | 'quick' | 'inactive'. */
+  async viewerQuestions({ chapterId, kind = 'active', difficulty = 'all', picturesOnly = false, search = '', page = 0, size = 20 }) {
+    let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, hints, context, context_id, image_path, lesson_anchor, difficulty, is_active, is_quick_check', { count: 'exact' });
+    if (chapterId) q = q.eq('chapter_id', chapterId);
+    if (kind === 'quick') q = q.eq('is_quick_check', true);
+    else q = q.eq('is_quick_check', false).eq('is_active', kind !== 'inactive');
+    if (difficulty && difficulty !== 'all') q = q.eq('difficulty', difficulty);
+    if (picturesOnly) q = q.not('image_path', 'is', null);
+    if (search) q = q.ilike('stem', `%${search.replace(/[%_]/g, m => '\\' + m)}%`);
+    q = q.order('created_at', { ascending: true }).order('id', { ascending: true }).range(page * size, page * size + size - 1);
+    let res; try { res = await q; } catch (e) { throw toAppError(e); }
+    if (res.error) throw toAppError(res.error);
+    return { rows: res.data, count: res.count };
+  },
   async questionStats(ids) {
     if (!ids.length) return {};
     const rows = await run(sb.from('v_question_stats').select('question_id, times_answered, times_wrong, wrong_rate, times_hinted, choice_dist').in('question_id', ids));
