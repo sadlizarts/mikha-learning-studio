@@ -9,8 +9,9 @@ import { renderStudent } from './student.js';
 import { renderGoals } from './goals.js';
 import { renderLessons } from './lessons.js';
 import { renderSchedule } from './schedule.js';
+import { renderViewer } from './viewer.js';
 
-const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, goals: renderGoals, schedule: renderSchedule };
+const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
 
 export async function renderAdmin(tab = 'import') {
   if (app.profile?.role !== 'admin') { navigate('#/home', { replace: true }); return; }
