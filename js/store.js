@@ -50,6 +50,14 @@ export async function signIn(email, password) {
   }
   return data.session;
 }
+/** Dad's practice runs are previews: no XP, not in Mikha's stats (decision 14 Oct 2026). */
+let ROLE = null;
+export const setRole = (r) => { ROLE = r; };
+const isAdmin = () => ROLE === 'admin';
+export async function changePassword(pw) {
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) throw toAppError(error);
+}
 export async function signOut() {
   Object.keys(localStorage).filter(k => k.startsWith('mls_attempt_') || k.startsWith('mls_q_') || k.startsWith('mls_lesson_') || k.startsWith('mls_page_')).forEach(lsDel);
   await clearLessonCache();
@@ -101,7 +109,7 @@ export async function completedAttempts(userId, limit = 100) {
 
 /* ---------------- practice ---------------- */
 export async function startAttempt(chapterIds, length) {
-  const data = await run(sb.rpc('start_attempt', { p_chapter_ids: chapterIds, p_requested_length: length, p_preview: false }));
+  const data = await run(sb.rpc('start_attempt', { p_chapter_ids: chapterIds, p_requested_length: length, p_preview: isAdmin() }));
   cacheAttempt(data);
   return data;
 }

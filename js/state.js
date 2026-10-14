@@ -1,5 +1,5 @@
 // In-memory app state shared by the screens. Server stays the source of truth.
-import { loadCatalog, loadProfile, admin } from './store.js';
+import { loadCatalog, loadProfile, admin, setRole } from './store.js';
 
 export const app = {
   session: null,
@@ -14,6 +14,7 @@ export async function setSession(session) {
   app.session = session;
   app.user = session?.user || null;
   app.profile = app.user ? await loadProfile(app.user.id) : null;
+  setRole(app.profile?.role || null);
   app.viewAs = null;
   if (app.profile?.role === 'admin') {
     try { const [st] = await admin.students(); if (st) app.viewAs = { id: st.id, name: st.display_name || 'Mikha' }; } catch { /* stay on own data */ }
