@@ -397,3 +397,7 @@ html.wide .split{grid-template-columns:1fr 1fr}
 .vq .opt{cursor:default;box-shadow:none;min-height:48px}
 .vq .opt:active{transform:none}
 .vq .qimg{cursor:zoom-in;min-height:60px}
+
+/* v1.7.3: Arabic runs inside questions/lessons (tajwid, ayat) */
+.ar{font-family:'Amiri Quran','Amiri','Geeza Pro','Noto Naskh Arabic',serif;font-weight:400;font-size:1.45em;line-height:1.9;unicode-bidi:isolate;direction:rtl;letter-spacing:0}
+.opt .ar{font-size:1.35em}

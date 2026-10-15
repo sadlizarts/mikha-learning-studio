@@ -13,7 +13,7 @@
   --shadow:4px 4px 0 var(--ink); --shadow-sm:2px 2px 0 var(--ink); --shadow-press:1px 1px 0 var(--ink);
   --r:14px; --r-sm:10px;
   --display:'Lilita One','Arial Black',Impact,sans-serif;
-  --body:'Nunito','Segoe UI',system-ui,sans-serif;
+  --body:'Nunito','Segoe UI','Amiri Quran',system-ui,sans-serif;
   --tab-h:64px;
   color-scheme:light;
 }
