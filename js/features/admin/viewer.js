@@ -1,6 +1,6 @@
 // Admin → Viewer: read-only question cards, shown the way Mikha sees them (context, picture, 4 options),
 // with the key marked green, the explanation and both hints. Nothing here can edit data.
-import { $, $$, esc, toast } from '../../ui.js';
+import { rich, $, $$, esc, toast } from '../../ui.js';
 import { admin, imageUrl } from '../../store.js';
 import { catalog, chapterIndex } from '../../state.js';
 import { chapterOptions, chapterLabel } from './common.js';
@@ -46,10 +46,10 @@ function card(q, n, st) {
     <div class="row" style="gap:4px;flex-wrap:wrap;align-items:center"><span class="tag">#${n}</span>${q.difficulty ? `<span class="tag ${DIFF_CLS[q.difficulty] ?? ''}">${esc(q.difficulty)}</span>` : ''}${q.image_path ? '<span class="tag">picture</span>' : ''}${q.lesson_anchor ? `<span class="tag mute">${esc(q.lesson_anchor)}</span>` : ''}${q.is_active ? '' : '<span class="tag mute">inactive</span>'}${stat}</div>
     ${dist ? `<div class="note" style="margin:-4px 0 0">${esc(dist.slice(3))}</div>` : ''}
     ${q.context ? `<div class="panel sunk ctx"><div class="eyebrow">Read this first</div><div class="body">${esc(q.context)}</div></div>` : ''}
-    <div class="panel qcard"><div class="stem">${esc(q.stem)}</div>${q.image_path ? `<button class="qimg" data-img="${esc(q.image_path)}" aria-label="Open picture"><div class="spin"></div></button>` : ''}</div>
-    <div class="opts">${['A', 'B', 'C', 'D'].map(k => `<div class="opt ${k === q.answer_key ? 'correct' : ''}"><span class="k" aria-hidden="true">${k === q.answer_key ? '✓' : k}</span><span class="grow">${esc(q.options?.[k] ?? '')}</span>${k === q.answer_key ? '<span class="sr-only">(answer key)</span>' : ''}</div>`).join('')}</div>
-    ${q.explanation ? `<div class="panel explain"><div class="eyebrow">Key ${esc(q.answer_key)} · why</div><p>${esc(q.explanation)}</p></div>` : ''}
-    ${hints.map((h, i) => `<div class="hintbox" style="animation:none"><span class="tag">${hints.length === 1 ? 'Hint · Remember' : i === 0 ? 'Hint 1 · Remember' : 'Hint 2 · Next step'}</span><div>${esc(h)}</div></div>`).join('')}
+    <div class="panel qcard"><div class="stem">${rich(q.stem)}</div>${q.image_path ? `<button class="qimg" data-img="${esc(q.image_path)}" aria-label="Open picture"><div class="spin"></div></button>` : ''}</div>
+    <div class="opts">${['A', 'B', 'C', 'D'].map(k => `<div class="opt ${k === q.answer_key ? 'correct' : ''}"><span class="k" aria-hidden="true">${k === q.answer_key ? '✓' : k}</span><span class="grow">${rich(q.options?.[k] ?? '')}</span>${k === q.answer_key ? '<span class="sr-only">(answer key)</span>' : ''}</div>`).join('')}</div>
+    ${q.explanation ? `<div class="panel explain"><div class="eyebrow">Key ${esc(q.answer_key)} · why</div><p>${rich(q.explanation)}</p></div>` : ''}
+    ${hints.map((h, i) => `<div class="hintbox" style="animation:none"><span class="tag">${hints.length === 1 ? 'Hint · Remember' : i === 0 ? 'Hint 1 · Remember' : 'Hint 2 · Next step'}</span><div>${rich(h)}</div></div>`).join('')}
   </article>`;
 }
 
