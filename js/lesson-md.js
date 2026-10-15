@@ -1,6 +1,7 @@
 // Lesson Markdown (PRD Lampiran E): parse + validate + render. Used by the Learn reader and the admin preview,
 // so what Dad previews is exactly what Mikha sees. Output HTML is built from escaped text only (no raw HTML allowed in).
 import { esc } from './ui.js';
+const AR_RUN = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+(?:[ \u00a0]+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g;
 
 const ANCHOR_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -9,7 +10,8 @@ export function inline(s) {
   return esc(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-    .replace(/\*(?![\s*])([^*]*?[^\s*])\*/g, '<em>$1</em>');
+    .replace(/\*(?![\s*])([^*]*?[^\s*])\*/g, '<em>$1</em>')
+    .replace(AR_RUN, m => `<span class="ar" dir="rtl" lang="ar">${m}</span>`);
 }
 
 function parseFrontmatter(lines) {

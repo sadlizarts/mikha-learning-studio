@@ -1,6 +1,9 @@
 // Shared UI helpers: escaping, mascot, toasts, bottom sheets, formatting.
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// rich: escaped text with Arabic runs wrapped for the Qur'an font, larger size and isolated bidi (PAI tajwid / ayat questions).
+const AR_RUN = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+(?:[ \u00a0]+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g;
+export const rich = (s) => esc(s).replace(AR_RUN, m => `<span class="ar" dir="rtl" lang="ar">${m}</span>`);
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
