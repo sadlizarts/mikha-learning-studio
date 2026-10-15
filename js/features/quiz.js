@@ -1,6 +1,6 @@
 // Practice screen (DESIGN §5.4, PRD §7.4, §7.8, FR-22..FR-26).
 // Feedback is shown instantly from the answer_key the client already has; the server grades again in answer_question.
-import { $, $$, esc, setMascot, subjectMeta, shortCode, sheet, toast, pick, BULB, reducedMotion } from '../ui.js';
+import { rich, $, $$, esc, setMascot, subjectMeta, shortCode, sheet, toast, pick, BULB, reducedMotion } from '../ui.js';
 import { getAttempt, cachedAttempt, saveAnswer, completeAttempt, imageUrl, flushAnswers } from '../store.js';
 import { catalog, chapterIndex } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
@@ -61,11 +61,11 @@ function renderQ() {
     ctx.hidden = false;
     ctx.classList.toggle('folded', !!same);
     ctx.innerHTML = same
-      ? `<button class="fold" aria-expanded="false"><span>Same text as before — tap to open</span><span aria-hidden="true">⌄</span></button><div class="body">${esc(q.context)}</div>`
-      : `<div class="eyebrow">Read this first</div><div class="body">${esc(q.context)}</div>`;
+      ? `<button class="fold" aria-expanded="false"><span>Same text as before — tap to open</span><span aria-hidden="true">⌄</span></button><div class="body">${rich(q.context)}</div>`
+      : `<div class="eyebrow">Read this first</div><div class="body">${rich(q.context)}</div>`;
   } else ctx.hidden = true;
 
-  $('#stem').textContent = q.stem;
+  $('#stem').innerHTML = rich(q.stem);
   const img = $('#qimg');
   img.hidden = true; img.innerHTML = '';
   if (q.image_path) imageUrl(q.image_path).then(url => {
@@ -75,7 +75,7 @@ function renderQ() {
 
   const order = q.option_order || ['A', 'B', 'C', 'D'];
   $('#opts').innerHTML = order.map((orig, pos) =>
-    `<button class="opt" data-orig="${orig}"><span class="k" aria-hidden="true">${'ABCD'[pos]}</span><span class="grow">${esc(q.options[orig])}</span></button>`).join('');
+    `<button class="opt" data-orig="${orig}"><span class="k" aria-hidden="true">${'ABCD'[pos]}</span><span class="grow">${rich(q.options[orig])}</span></button>`).join('');
 
   $('#hints').innerHTML = '';
   const hints = (q.hints || []).filter(Boolean);
@@ -93,7 +93,7 @@ function showHint() {
   const q = qAt(); const hints = (q.hints || []).filter(Boolean);
   if (S.locked || S.hint >= hints.length) return;
   const tag = hints.length === 1 ? 'Hint · Remember' : S.hint === 0 ? 'Hint 1 · Remember' : 'Hint 2 · Next step';
-  $('#hints').insertAdjacentHTML('beforeend', `<div class="hintbox"><span class="tag">${tag}</span><div>${esc(hints[S.hint])}</div></div>`);
+  $('#hints').insertAdjacentHTML('beforeend', `<div class="hintbox"><span class="tag">${tag}</span><div>${rich(hints[S.hint])}</div></div>`);
   S.hint++;
   const hb = $('#hintbtn');
   if (S.hint >= hints.length) hb.hidden = true; else hb.innerHTML = `${BULB} Another hint`;
@@ -123,7 +123,7 @@ async function choose(orig) {
   setMascot($('#m-quiz'), ok ? 'happy' : 'sad', ok ? 'happy' : 'sad');
   $('#explain').className = 'panel explain' + (ok ? '' : ' bad');
   $('#explain-h').textContent = ok ? "Why it's right" : 'What to remember';
-  $('#exptext').textContent = q.explanation || '';
+  $('#exptext').innerHTML = rich(q.explanation || '');
   const rl = $('#readlink');
   rl.hidden = !(!ok && hasAnchor(S.lidx, q.chapter_id, q.lesson_anchor));
   if (!rl.hidden) rl.innerHTML = `📖 Read: ${esc(anchorLabel(q.lesson_anchor))} ›`;

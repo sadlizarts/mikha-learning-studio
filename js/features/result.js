@@ -1,5 +1,5 @@
 // Result (DESIGN §5.5) — also the read-only session detail opened from History.
-import { $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reducedMotion } from '../ui.js';
+import { rich, $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reducedMotion } from '../ui.js';
 import { getAttempt, startAttempt } from '../store.js';
 import { catalog, chapterIndex } from '../state.js';
 import { show, navigate } from '../router.js';
@@ -58,9 +58,9 @@ export async function renderResult(id, { fresh }) {
   const wrong = answered.filter(q => !q.answer.is_correct);
   const mistakes = wrong.length ? wrong.map(q => `<div class="mistake">
       ${q.context ? `<div class="ctxq">${esc(q.context.length > 220 ? q.context.slice(0, 220) + '…' : q.context)}</div>` : ''}
-      <div class="q">${esc(q.stem)}</div>
-      <div class="ans"><span class="you">You: ${esc(optText(q, q.answer.chosen_key))}</span><span class="right">Correct: ${esc(optText(q, q.answer_key))}</span></div>
-      <div class="ex">${esc(q.explanation || '')}</div>
+      <div class="q">${rich(q.stem)}</div>
+      <div class="ans"><span class="you">You: ${rich(optText(q, q.answer.chosen_key))}</span><span class="right">Correct: ${rich(optText(q, q.answer_key))}</span></div>
+      <div class="ex">${rich(q.explanation || '')}</div>
       ${hasAnchor(lidx, q.chapter_id, q.lesson_anchor) ? `<button class="readlink" data-read="${q.chapter_id}" data-anchor="${esc(q.lesson_anchor)}">📖 Read: ${esc(anchorLabel(q.lesson_anchor))} ›</button>` : ''}</div>`).join('')
     : '<div class="panel sunk empty">Perfect run. Nothing to review! 🏆</div>';
 
