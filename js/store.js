@@ -514,6 +514,18 @@ export const admin = {
   },
   async addAssessment(row) { return run(sb.from('assessments').insert(row)); },
   async updateAssessment(id, patch) { return run(sb.from('assessments').update(patch).eq('id', id)); },
+  /** All answers of a student (no preview runs) since an ISO time (null = all), with the question's chapter. Paged by 1000. */
+  async studentAnswers(studentId, sinceIso = null) {
+    const out = [];
+    for (let from = 0; ; from += 1000) {
+      let q = sb.from('attempt_answers').select('attempt_id, is_correct, hint_level, time_ms, answered_at, questions!inner(chapter_id), attempts!inner(user_id, is_preview)')
+        .eq('attempts.user_id', studentId).eq('attempts.is_preview', false);
+      if (sinceIso) q = q.gte('answered_at', sinceIso);
+      const rows = await run(q.order('answered_at', { ascending: true }).order('id', { ascending: true }).range(from, from + 999));
+      out.push(...rows);
+      if (rows.length < 1000) return out;
+    }
+  },
   async lessonReads(studentId) {
     return run(sb.from('lesson_reads').select('chapter_id, first_completed_at, read_count, last_read_at, quick_check_score, quick_check_total, pages_read').eq('user_id', studentId));
   },
