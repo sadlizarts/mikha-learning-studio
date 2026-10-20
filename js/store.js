@@ -63,6 +63,23 @@ export async function signOut() {
   await clearLessonCache();
   await sb.auth.signOut();
 }
+/** Password-reset link (FR-04b). Supabase sends the user back as #access_token=…&type=recovery (or #error=…).
+ *  Read it once, sign in with it, and clean the URL. Returns 'recovery' | 'signin' | 'error:<msg>' | null. */
+export async function consumeAuthRedirect() {
+  const h = location.hash.replace(/^#/, '');
+  if (!/(^|&)(access_token|error)=/.test(h)) return null;
+  const p = new URLSearchParams(h);
+  history.replaceState(null, '', location.pathname + location.search + '#/home');
+  if (p.get('error')) return 'error:' + (p.get('error_description') || p.get('error'));
+  const { error } = await sb.auth.setSession({ access_token: p.get('access_token'), refresh_token: p.get('refresh_token') });
+  if (error) return 'error:' + error.message;
+  return p.get('type') === 'recovery' ? 'recovery' : 'signin';
+}
+/** Email a password-reset link that opens this app. */
+export async function sendPasswordReset(email) {
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin + location.pathname });
+  if (error) throw toAppError(error);
+}
 export const onAuthChange = (fn) => sb.auth.onAuthStateChange((evt, session) => fn(evt, session));
 
 export async function loadProfile(userId) {

@@ -1,10 +1,10 @@
 // Boot: session → route guard → screens. No build step (CLAUDE.md).
 import { $, toast } from './ui.js';
-import { getSession, onAuthChange } from './store.js';
+import { getSession, onAuthChange, consumeAuthRedirect } from './store.js';
 import { app, setSession } from './state.js';
 import { route, setGuard, startRouter, navigate } from './router.js';
 import { renderLogin } from './auth.js';
-import { renderHome } from './features/home.js';
+import { renderHome, openPasswordOnHome } from './features/home.js';
 import { renderPick } from './features/pick.js';
 import { renderQuiz } from './features/quiz.js';
 import { renderResult } from './features/result.js';
@@ -17,6 +17,9 @@ import { renderSchedule } from './features/schedule.js';
 window.MLS = { app };
 
 async function boot() {
+  let redirect = null;
+  try { redirect = await consumeAuthRedirect(); } catch (e) { redirect = 'error:' + e.message; }
+  if (redirect === 'recovery') openPasswordOnHome({ recovery: true });
   try {
     const s = await getSession();
     if (s) await setSession(s);
@@ -46,6 +49,7 @@ async function boot() {
   route('schedule', renderSchedule);
 
   startRouter();
+  if (redirect?.startsWith('error:')) toast(`That reset link did not work (${redirect.slice(6)}). Ask for a new one.`, 6000);
 }
 
 /* offline banner (FR-72) */
