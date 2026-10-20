@@ -145,6 +145,7 @@ export async function renderHome() {
   setMascot($('#m-home'), 'neutral');
 
   $('#pwbtn').onclick = () => passwordSheet();
+  if (wantPw) { const o = wantPw; wantPw = null; passwordSheet(o); }
   $('#signout').onclick = async () => {
     const ok = await sheet({ title: 'Sign out?', body: 'You will need your email and password to come back in.', actions: [{ label: 'Stay signed in', value: false }, { label: 'Sign out', value: true, cls: 'danger' }] });
     if (ok) await signOut();
@@ -157,11 +158,15 @@ export async function renderHome() {
   };
 }
 
+/** Opened from a password-reset link: show the new-password sheet once Home is drawn. */
+let wantPw = null;
+export const openPasswordOnHome = (opts) => { wantPw = opts; };
+
 /** Change own password (FR-04). The new password is typed by the user; the app never shows or stores it. */
-function passwordSheet() {
+function passwordSheet({ recovery = false } = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'sheet'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Change password');
-  wrap.innerHTML = `<div class="panel"><h3>Change password</h3>
+  wrap.innerHTML = `<div class="panel"><h3>${recovery ? 'Set a new password' : 'Change password'}</h3>${recovery ? '<p class="note">Your reset link worked. Choose a new password for this account.</p>' : ''}
     <div class="stack" style="gap:10px;margin:8px 0"><div class="field"><label for="pw1">New password (8+ characters)</label><input type="password" id="pw1" autocomplete="new-password" minlength="8"></div>
     <div class="field"><label for="pw2">Type it again</label><input type="password" id="pw2" autocomplete="new-password" minlength="8"></div></div>
     <p class="note" id="pwmsg" style="min-height:1.2em"></p>
