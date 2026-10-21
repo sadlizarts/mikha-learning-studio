@@ -11,8 +11,9 @@ import { renderGoals } from './goals.js';
 import { renderLessons } from './lessons.js';
 import { renderSchedule } from './schedule.js';
 import { renderViewer } from './viewer.js';
+import { renderDojoAdmin } from './dojo.js';
 
-const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, subjects: renderSubjects, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
+const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, subjects: renderSubjects, dojo: renderDojoAdmin, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
 
 export async function renderAdmin(tab = 'import') {
   if (app.profile?.role !== 'admin') { navigate('#/home', { replace: true }); return; }
