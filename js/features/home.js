@@ -110,12 +110,23 @@ export async function renderHome() {
       <button class="btn ${inprog ? '' : 'primary lg'} block" data-nav="#/pick">Pick chapters →</button>
     </div>`;
 
+  const hi = (html, n) => html ? `<div class="hitem" style="order:${n}">${html}</div>` : '';
   body.innerHTML = `<div class="stack">
     <div class="row between greet">
       <div><div class="eyebrow">${esc(prettyDay())}${viewing ? ' · Dad\'s view' : ''}</div><h1>${viewing ? `${esc(app.viewAs.name.split(' ')[0])}'s studio` : `Hey ${esc(firstName())}!`}</h1></div>
       <div class="mascot" id="m-home"></div>
     </div>
-    <div class="statrow">
+    <div class="hgrid">
+    <div class="hmain">
+    ${hi(resume, 5)}${hi(cta, 6)}${hi(planCard, 3)}${hi(mission, 4)}
+    <div class="hitem" style="order:7">
+      <div class="row between" style="margin-bottom:8px"><h3 style="font-size:20px">Recent battles</h3>${done.length ? '<button class="btn ghost small" data-nav="#/history">All</button>' : ''}</div>
+      <div class="recent">${done.length ? done.slice(0, 3).map(a => recRow(a, idx)).join('') :
+        '<div class="panel sunk empty" style="font-size:15px">No battles yet. Your first practice shows up here.</div>'}</div>
+    </div>
+    </div>
+    <aside class="hside">
+    <div class="statrow hitem" style="order:1">
       <div class="panel stat">
         <div class="eyebrow">Streak</div>
         <div class="big num">${FLAME} ${streak}<small>${streak === 1 ? 'day' : 'days'}</small></div>
@@ -129,15 +140,8 @@ export async function renderHome() {
         <div class="note num" style="margin-top:6px">${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
       </div>
     </div>
-    ${comingUp}
-    ${planCard}
-    ${mission}
-    ${resume}
-    ${cta}
-    <div>
-      <div class="row between" style="margin-bottom:8px"><h3 style="font-size:20px">Recent battles</h3>${done.length ? '<button class="btn ghost small" data-nav="#/history">All</button>' : ''}</div>
-      <div class="recent">${done.length ? done.slice(0, 3).map(a => recRow(a, idx)).join('') :
-        '<div class="panel sunk empty" style="font-size:15px">No battles yet. Your first practice shows up here.</div>'}</div>
+    ${hi(comingUp, 2)}
+    </aside>
     </div>
     <div class="row between" style="margin-top:6px">
       <span class="note">Signed in as ${esc(app.profile?.display_name || '')}${app.profile?.role === 'admin' ? ' · admin' : ''}</span>

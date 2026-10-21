@@ -59,7 +59,7 @@ export async function renderLearn() {
   body.innerHTML = `<div class="stack">
     <div class="subtabs" role="tablist" aria-label="Subjects">${tabs}</div>
     ${total ? '' : '<div class="panel sunk empty">No lessons published yet. Dad adds them in Admin → Lessons.</div>'}
-    <div class="stack" style="gap:10px">${rows || '<div class="panel sunk empty">No chapters here yet.</div>'}</div>
+    <div class="stack lgrid" style="gap:10px">${rows || '<div class="panel sunk empty">No chapters here yet.</div>'}</div>
   </div>`;
   body.dataset.ready = '1';
   $$('[data-lsub]', body).forEach(b => b.onclick = () => { learnSub = b.dataset.lsub; renderLearn(); });
