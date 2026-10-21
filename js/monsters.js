@@ -3,13 +3,17 @@
 // Exam Gate Bosses guard each belt. All shapes are original vector art (no licensed characters).
 
 export const FAMILIES = {
-  math: { name: 'Rune Constructs', lore: 'Living geometry that guards the laws of number.', c: '#3D7BFF', d: '#183A94', g: '#A8D4FF', forms: ['Glyph', 'Rune Warden', 'Theorem Colossus'] },
-  sci: { name: 'Crystal Elementals', lore: 'Shards of matter and force, humming with energy.', c: '#2FD39A', d: '#0B6B4C', g: '#C9FFEA', forms: ['Shardling', 'Prism Brute', 'Core Titan'] },
-  eng: { name: 'Ink Phantoms', lore: 'Stories that escaped the page and twist meaning.', c: '#9B6BFF', d: '#3F2496', g: '#E6DAFF', forms: ['Inkling', 'Quill Wraith', 'Lexicon Lord'] },
-  ind: { name: 'Aksara Spirits', lore: 'Kite-spirits woven from words and their meanings.', c: '#FF5A5F', d: '#8E1A27', g: '#FFD3C7', forms: ['Kertas Wisp', 'Majas Dancer', 'Hikayat Sovereign'] },
-  pan: { name: 'Oath Guardians', lore: 'Armoured sentinels of rules, rights and duty.', c: '#FFB627', d: '#8A5200', g: '#FFE8A6', forms: ['Sentry', 'Warden Knight', 'Council Colossus'] },
-  aga: { name: 'Mirror Shades', lore: 'Reflections that test patience, honesty and kindness.', c: '#36C9D3', d: '#0C5E68', g: '#D2F8FB', forms: ['Glimmer', 'Echo Shade', 'Mirage Sentinel'] },
+  math: { name: 'Logic Constructs', lore: 'Living crystal geometry that guards the laws of number.', c: '#3D7BFF', d: '#183A94', g: '#A8D4FF', forms: ['Glyph Shard', 'Cube Sentinel', 'Crystal Golem', 'Theorem Warlord'] },
+  sci: { name: 'Elemental Lifeforms', lore: 'Seeds, stones and sparks that grew a will of their own.', c: '#2FD39A', d: '#0B6B4C', g: '#C9FFEA', forms: ['Sproutling', 'Leaf Sprite', 'Crystal Brute', 'Grove Titan'] },
+  eng: { name: 'Story Phantoms', lore: 'Stories that escaped the page and twist meaning.', c: '#9B6BFF', d: '#3F2496', g: '#E6DAFF', forms: ['Ink Blot', 'Hooded Quill', 'Scroll Wraith', 'Lexicon Lord'] },
+  ind: { name: 'Narrative Spirits', lore: 'Masked fire-spirits woven from words and their meanings.', c: '#FF5A5F', d: '#8E1A27', g: '#FFD3C7', forms: ['Api Wisp', 'Topeng Imp', 'Topeng Dancer', 'Hikayat Sovereign'] },
+  pan: { name: 'Law Sentinels', lore: 'Armoured guardians of rules, rights and duty.', c: '#FFB627', d: '#8A5200', g: '#FFE8A6', forms: ['Bolt Sentry', 'Shield Squire', 'Oath Knight', 'Justice Seraph'] },
+  aga: { name: 'Virtue Spirits', lore: 'Gentle lights that test patience, honesty and kindness.', c: '#36C9D3', d: '#0C5E68', g: '#D2F8FB', forms: ['Glimmer Wisp', 'Lantern Acolyte', 'Orb Keeper', 'Moon Sage'] },
 };
+/** Art version folder/prefix for painted sprites (v2.2.0: sheet 3, four tiers). */
+const ART_V = 'mon2';
+export const monsterSrc = (fam, tier) => `hero/${ART_V}-${fam}-${tier}.webp`;
+export const GATE_ORDER = ['math', 'sci', 'eng', 'ind', 'pan', 'aga'];
 const PREFIX = { M7: 'math', S7: 'sci', E8: 'eng', BI7: 'ind', PP7: 'pan', PAI7: 'aga' };
 export const familyOf = (ch) => PREFIX[String(ch?.code || '').split('-')[0]] || 'sci';
 
@@ -29,7 +33,7 @@ export function phaseOf(st, R) {
   if (st.acc < R.revive) return 'elite';
   return 'boss';
 }
-export const formName = (fam, phase) => { const f = FAMILIES[fam]; return phase === 'minion' ? f.forms[0] : phase === 'elite' ? f.forms[1] : f.forms[2]; };
+export const formName = (fam, phase) => { const f = FAMILIES[fam]; return phase === 'minion' ? f.forms[0] : phase === 'elite' ? f.forms[1] : phase === 'exam' ? f.forms[3] : f.forms[2]; };
 
 /* ---------- seeded variation ---------- */
 function seedOf(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -103,11 +107,15 @@ const ART = {
 const SEAL = `<g transform="rotate(-16 60 58)"><rect x="50" y="16" width="20" height="84" rx="2" fill="#FFF4D2" stroke="${INK}" stroke-width="2"/><path d="M55 26h10M55 34h10M60 42v34M55 52h10M54 66l12 6M55 84h10" stroke="#E8473C" stroke-width="2.2" stroke-linecap="round"/></g>`;
 
 const SEAL_OVERLAY = `<svg class="seal-ov" viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-16 60 58)"><rect x="50" y="16" width="20" height="84" rx="2" fill="#FFF4D2" stroke="${INK}" stroke-width="2"/><path d="M55 26h10M55 34h10M60 42v34M55 52h10M54 66l12 6M55 84h10" stroke="#E8473C" stroke-width="2.2" stroke-linecap="round"/></g></svg>`;
-/** Painted monster portrait (v2.1.0, from Sadli's concept sheet). phase: new | minion | elite | boss | sealed. */
+/** Painted monster portrait (v2.2.0, sheet 3). phase: new | minion | elite | boss | sealed. Idle float is CSS (seeded delay). */
 export function monsterSVG(ch, { phase = 'boss', size = 96 } = {}) {
   const fam = familyOf(ch), r = rng(seedOf('mon:' + ch.code));
-  const hue = Math.round((r() - 0.5) * 36), form = phase === 'minion' ? 'minion' : phase === 'elite' ? 'elite' : 'boss';
-  return `<span class="mon-wrap mon-${phase}" style="width:${size}px;height:${size}px"><img src="hero/mon-${fam}-${form}.webp" alt="" width="${size}" height="${size}" style="filter:hue-rotate(${hue}deg)" decoding="async">${phase === 'new' ? '<b class="mon-q">?</b>' : ''}${phase === 'sealed' ? SEAL_OVERLAY : ''}</span>`;
+  const hue = Math.round((r() - 0.5) * 20), delay = -(r() * 3).toFixed(2), form = phase === 'minion' ? 'minion' : phase === 'elite' ? 'elite' : 'boss';
+  return `<span class="mon-wrap mon-${phase}" style="width:${size}px;height:${size}px;--md:${delay}s"><img src="${monsterSrc(fam, form)}" alt="" width="${size}" height="${size}" style="filter:hue-rotate(${hue}deg)" decoding="async">${phase === 'new' ? '<b class="mon-q">?</b>' : ''}${phase === 'sealed' ? SEAL_OVERLAY : ''}</span>`;
+}
+/** Exam Boss of a family (gate guardian). */
+export function examBoss(fam, { size = 150, locked = false, belt = '' } = {}) {
+  return `<span class="mon-wrap mon-exam${locked ? ' locked' : ''}" style="width:${size}px;height:${size}px${belt ? `;--belt:${belt}` : ''}"><img src="${monsterSrc(fam, 'exam')}" alt="" width="${size}" height="${size}" decoding="async">${locked ? '<svg class="lock-ov" viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="17" width="22" height="17" rx="3" fill="#CFC7EA" stroke="#120F22" stroke-width="2"/><path d="M13 17v-5a7 7 0 0 1 14 0v5" fill="none" stroke="#CFC7EA" stroke-width="3"/></svg>' : ''}</span>`;
 }
 /** Vector fallback kept for reference / offline art. */
 export function monsterVector(ch, { phase = 'boss', size = 96, uid = '' } = {}) {
@@ -151,7 +159,7 @@ export function gateSVG(color, { size = 140, locked = false } = {}) {
 }
 
 /** Family emblem (small round badge). */
-export const familyPortrait = (fam, size = 64) => `<img class="fam-pic" src="hero/mon-${fam}-big.webp" width="${size}" height="${size}" alt="" decoding="async">`;
+export const familyPortrait = (fam, size = 64) => `<img class="fam-pic" src="${monsterSrc(fam, 'exam')}" width="${size}" height="${size}" alt="" decoding="async">`;
 export function familyEmblem(fam, size = 40) {
   const f = FAMILIES[fam];
   const glyph = { math: 'M14 26 L20 12 L26 26 Z M12 22 h16', sci: 'M20 10 L26 20 L20 30 L14 20 Z', eng: 'M14 28 C18 18 24 12 28 10 C24 16 22 22 20 30 Z', ind: 'M20 10 L28 20 L20 30 L12 20 Z M20 30 v6', pan: 'M12 12 h16 v10 c0 6 -4 9 -8 11 c-4 -2 -8 -5 -8 -11 Z', aga: 'M20 10 a8 10 0 1 0 0.1 0 Z' }[fam];
