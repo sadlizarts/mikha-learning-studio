@@ -12,8 +12,9 @@ import { renderLessons } from './lessons.js';
 import { renderSchedule } from './schedule.js';
 import { renderViewer } from './viewer.js';
 import { renderDojoAdmin } from './dojo.js';
+import { renderHeroStudio } from './hero.js';
 
-const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, subjects: renderSubjects, dojo: renderDojoAdmin, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
+const TABS = { import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, subjects: renderSubjects, dojo: renderDojoAdmin, hero: renderHeroStudio, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
 
 export async function renderAdmin(tab = 'import') {
   if (app.profile?.role !== 'admin') { navigate('#/home', { replace: true }); return; }
