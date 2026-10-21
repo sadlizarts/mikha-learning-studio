@@ -774,7 +774,19 @@ html.nd-on .sheet .btn.primary{background:linear-gradient(135deg,#FF6A3D,#FFB13D
 .nd .dj-hero .art .heropic{width:100%;height:100%;max-height:none;object-fit:cover;margin:0;border-radius:var(--nd-r) 0 0 var(--nd-r)}
 .nd .evo2 .pane.next .heropic{filter:brightness(0) drop-shadow(0 0 8px var(--nd-gold)) drop-shadow(0 0 2px #fff)}
 .mon-wrap{position:relative;display:inline-block;vertical-align:middle;flex:none}
-.mon-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.mon-wrap img{width:100%;height:100%;object-fit:contain;display:block;transform-origin:50% 92%}
+/* v2.2.0 idle life: float + breathe; bigger forms move slower and heavier */
+.mon-wrap.mon-minion img{animation:mon-bob 2.6s ease-in-out infinite var(--md,0s)}
+.mon-wrap.mon-elite img{animation:mon-bob 3.2s ease-in-out infinite var(--md,0s)}
+.mon-wrap.mon-boss img{animation:mon-breathe 3.8s ease-in-out infinite var(--md,0s)}
+.mon-wrap.mon-exam img{animation:mon-breathe 4.4s ease-in-out infinite;filter:drop-shadow(0 0 14px color-mix(in srgb,var(--belt,#FFD25A) 55%,transparent))}
+.mon-wrap.mon-exam.locked img{filter:brightness(.8) saturate(.7)}
+.mon-wrap .lock-ov{position:absolute;left:50%;top:50%;width:26%;height:26%;left:auto;top:auto;right:2%;bottom:4%;transform:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.mon-wrap.hit img{animation:mon-hit .45s ease-out}
+@keyframes mon-bob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-6%) scale(.98,1.02)}}
+@keyframes mon-breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2.5%) scale(1.035)}}
+@keyframes mon-hit{0%{transform:translateX(0);filter:brightness(2.2)}25%{transform:translateX(-6%) rotate(-4deg)}55%{transform:translateX(5%) rotate(3deg);filter:brightness(1.4)}100%{transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.mon-wrap img{animation:none!important}}
 .mon-wrap.mon-new img{filter:brightness(0) opacity(.55)!important}
 .mon-wrap.mon-sealed img{filter:saturate(.3) brightness(.8)!important}
 .mon-wrap .mon-q{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:2.2em;color:#CFC7EA;opacity:.8}
