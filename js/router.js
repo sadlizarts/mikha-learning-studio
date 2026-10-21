@@ -20,6 +20,7 @@ export function show(screen) {
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + screen));
   const tab = TABS.includes(screen);
   $('#tabbar').hidden = !tab;
+  document.documentElement.classList.toggle('has-tabs', tab);
   $$('.tab').forEach(t => { const on = t.dataset.tab === screen; t.classList.toggle('on', on); t.setAttribute('aria-current', on ? 'page' : 'false'); });
   $('#toast').style.bottom = tab ? '' : 'calc(16px + env(safe-area-inset-bottom,0px))';
 }
