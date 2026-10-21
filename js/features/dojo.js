@@ -1,13 +1,14 @@
-// Dojo screen (v1.8.0): rank + rank exam, today's Ki (daily target / XP cap), streak shield, bosses per chapter, technique cards.
-import { $, $$, esc, subjectMeta, shortCode, sheet, toast, jakartaDate, shortDay } from '../ui.js';
+// Dojo (v2.0.0 Night Dojo): mission-control hub — hero banner, today's mission, exam gate, priority hunt, monster families.
+// Logic unchanged from v1.8 (rank, exam, Ki/XP cap, shield, bosses, cards); only presentation is new.
+import { $, $$, esc, subjectMeta, shortCode, sheet, toast, jakartaDate, shortDay, fmtNum } from '../ui.js';
 import { loadProgress, progressOf, loadDojo, startAttempt, startRankExam, loadHero } from '../store.js';
 import { heroSVG } from '../hero/art.js';
 import { heroContext, inventory, validEquip } from '../hero/items.js';
 import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 import { RANKS, rules, bossName, techName, bossState, bossSVG, cardSVG, beltSVG, cardTier, TIER_LABEL, rankInfo } from '../dojo.js';
+import { FAMILIES, familyOf, phaseOf, formName, PHASES, monsterSVG, gateSVG, familyEmblem } from '../monsters.js';
 
-let filter = 'all';
 
 const STATUS = {
   new: ['Not met yet', 'var(--ink-3)'], fight: ['Fighting', 'var(--ember)'], defeated: ['Sealed', 'var(--ok)'],
@@ -27,7 +28,8 @@ export function dojoFrom(cat, prog, dj, viewing = !!app.viewAs) {
     let tech = techName(ch), j = 0;
     while (usedT.has(tech) && j < 20) tech = techName(ch, '#' + (++j));
     usedT.add(tech);
-    return { ch, m, st, beaten: dj.beaten[c.chapter_id] || null, ...nm, tech };
+    const fam = familyOf(ch), phase = phaseOf(st, R);
+    return { ch, m, st, beaten: dj.beaten[c.chapter_id] || null, ...nm, tech, fam, phase, title: formName(fam, ['sealed', 'new'].includes(phase) ? 'boss' : phase) };
   });
   const order = Object.fromEntries(cat.chapters.map((c, i) => [c.chapter_id, i]));
   bosses.sort((a, b) => order[a.ch.chapter_id] - order[b.ch.chapter_id]);
@@ -88,7 +90,7 @@ export function bossTile(b, { small = false } = {}) {
   </button>`;
 }
 
-async function fight(chapterId, btn) {
+export async function fight(chapterId, btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Summoning…'; }
   try { const d = await startAttempt([chapterId], 30); navigate(`#/quiz/${d.attempt.id}`); }
   catch (e) {
@@ -97,80 +99,128 @@ async function fight(chapterId, btn) {
   }
 }
 
+const PHASE_TEXT = {
+  new: 'Not met yet. Answer a few questions in this chapter to reveal it.',
+  minion: 'A Minion. Reach 15 answers in this chapter and it grows into its Elite form.',
+  elite: 'An Elite. Lift your last-30 accuracy above 70% to draw out the Boss.',
+  boss: 'The Boss is here. Hit 80% on your last 30 answers to seal it.',
+  sealed: 'Sealed. Keep your last-30 accuracy at 80% or more to keep it locked.',
+};
+
+/** Collectible boss card (Night Dojo). */
+export function bossCard(b) {
+  const f = FAMILIES[b.fam], ph = b.phase, came = b.st.status === 'revived';
+  const tier = ph === 'sealed' ? '✓' : PHASES[ph].tier || '?';
+  return `<button class="bcard ${ph}${came ? ' revived' : ''}" data-boss="${b.ch.chapter_id}" style="--fc:${f.c}">
+    <div class="port">${monsterSVG(b.ch, { phase: ph, size: 118 })}<span class="tier" title="${PHASES[ph].label}">${tier}</span>${came ? '<span class="stamp nd-pill" style="--c:#FF6B7A"><span class="dot"></span>Came back</span>' : ''}</div>
+    <div class="meta">
+      <div class="nm">${ph === 'new' ? '???' : esc(b.name)}</div>
+      <div class="sub">${ph === 'new' ? 'Unknown' : `${PHASES[ph].label} · ${esc(b.title)}`}<br>${esc(b.m.short)} ${esc(shortCode(b.ch.code))} · ${esc(b.ch.name)}</div>
+      ${ph === 'sealed' ? `<div class="hook">🃏 ${esc(b.tech)} · ${TIER_LABEL[cardTier(b.beaten?.best_accuracy || 80)]}</div>` : `<div class="nd-bar" aria-label="HP ${b.st.hp}%"><i style="--p:${b.st.hp}%"></i></div><div class="hook">Seal reward: ${esc(b.tech)} card</div>`}
+    </div></button>`;
+}
+
+/** Exam Gate Boss card. */
+export function gateCard(d) {
+  const { rk, R, viewing, triedToday } = d;
+  if (!rk.next) return `<div class="nd-card gate-card" style="--belt:${rk.color}">${gateSVG(rk.color, { size: 150 })}<div><div class="nd-label">Final gate</div><div class="nd-h2">All gates opened</div><p class="nd-sub">You are a ${esc(rk.name)}. Keep every seal strong.</p></div></div>`;
+  const pct = Math.min(100, Math.round(100 * rk.have / rk.need));
+  const action = viewing ? '' : rk.ready ? (triedToday ? '<p class="nd-sub" style="margin-top:8px">You challenged the gate today. Train and return tomorrow.</p>' : '<button class="nd-btn primary" id="exambtn" style="margin-top:10px">Challenge the gate →</button>') : '';
+  return `<div class="nd-card gate-card ${rk.ready ? 'emph' : ''}" style="--belt:${rk.next.color};--em:${rk.next.color === '#F4F1EA' ? '#FFD25A' : rk.next.color}">
+    <div>${gateSVG(rk.next.color, { size: 150, locked: !rk.ready })}</div>
+    <div style="min-width:0"><div class="nd-label">Exam Gate Boss · ${esc(rk.next.belt)}</div>
+      <div class="nd-h2" style="margin:4px 0 6px">Gatekeeper of ${esc(rk.next.name)}</div>
+      <p class="nd-sub">${rk.ready ? `Open: 30 questions from your sealed bosses. Pass with ${R.pass}% to evolve.` : `Seal ${rk.need - rk.have} more boss${rk.need - rk.have === 1 ? '' : 'es'} to open this gate.`}</p>
+      <div class="nd-bar" style="margin-top:10px"><i style="--p:${pct}%;--bc:linear-gradient(90deg,${rk.next.color === '#F4F1EA' ? '#fff' : rk.next.color},#FFD25A)"></i></div>
+      <div class="nd-sub nd-num" style="margin-top:4px;font-size:12px">${rk.have}/${rk.need} sealed</div>${action}</div>
+  </div>`;
+}
+
+export function missionRow(d) {
+  const { prog, R } = d;
+  const n = prog?.answers_today || 0, pct = Math.min(100, Math.round(100 * n / R.target)), capped = n >= R.cap;
+  const streak = prog?.current_streak || 0;
+  const shield = prog?.freeze_ready ? (prog?.freeze_needed ? 'Shield protecting today' : 'Shield ready') : 'Shield recharging';
+  const pr = { revived: 0, cracked: 1, fight: 2 };
+  const next = d.bosses.filter(b => b.st.status in pr).sort((a, b) => pr[a.st.status] - pr[b.st.status] || a.st.hp - b.st.hp)[0];
+  return `<div class="dj-row">
+    <div class="nd-card mini"><div class="nd-label">Today's Ki</div>
+      <div class="row" style="gap:12px;align-items:center"><div class="ring" style="--p:${pct};--rc:${capped ? '#46E0A0' : '#FFD25A'}"><span>${n}</span></div>
+      <div class="nd-sub" style="font-size:12.5px">${capped ? `XP cap reached. Rest!` : n >= R.target ? 'Mission done ✓' : `${R.target - n} to go`}<br><span style="color:var(--nd-faint)">target ${R.target}</span></div></div></div>
+    <div class="nd-card mini"><div class="nd-label">Streak</div>
+      <div class="row" style="gap:10px;align-items:baseline"><span class="big">${streak}</span><span class="nd-sub">day${streak === 1 ? '' : 's'}</span></div>
+      <span class="nd-pill" style="--c:${prog?.freeze_ready ? '#6FB7FF' : '#7A7299'};align-self:flex-start"><span class="dot"></span>🛡️ ${shield}</span></div>
+    <div class="nd-card mini" ${next ? `data-boss="${next.ch.chapter_id}" style="cursor:pointer"` : ''}><div class="nd-label">Next target</div>
+      ${next ? `<div class="row" style="gap:10px;align-items:center"><div style="flex:none">${monsterSVG(next.ch, { phase: next.phase, size: 54 })}</div><div style="min-width:0"><b style="color:#fff">${esc(next.name)}</b><div class="nd-sub" style="font-size:12px">${esc(next.m.short)} ${esc(shortCode(next.ch.code))} · HP ${next.st.hp}%</div></div></div>` : '<div class="nd-sub">Pick any chapter to start a hunt.</div>'}</div>
+  </div>`;
+}
+
 export function openBoss(b, viewing) {
-  const s = b.st, [lbl] = STATUS[s.status];
-  const why = s.status === 'new' ? 'You have not fought this spirit yet.'
-    : s.status === 'defeated' ? `Sealed! Keep your last-30 accuracy at ${'≥'} 80% to keep it sealed.`
-    : s.status === 'revived' ? 'It broke out of its seal (accuracy fell below 70%). Seal it again!'
-    : s.status === 'cracked' ? 'The seal is cracking (accuracy under 80%). A practice will fix it.'
-    : 'Get at least 15 answers and 80% on the last 30 to seal it.';
-  const card = b.beaten ? `<div class="row" style="gap:12px;margin-top:12px;align-items:center">${cardSVG(b.ch, b.m.color, cardTier(b.beaten.best_accuracy), { size: 64 })}
+  const ph = b.phase || 'boss', f = FAMILIES[b.fam || familyOf(b.ch)], s = b.st;
+  const card = b.beaten ? `<div class="row" style="gap:12px;margin-top:12px;align-items:center">${cardSVG(b.ch, f.c, cardTier(b.beaten.best_accuracy), { size: 60 })}
       <div><div class="eyebrow">Technique card</div><b>${esc(b.tech)}</b><div class="note">${TIER_LABEL[cardTier(b.beaten.best_accuracy)]} · best ${b.beaten.best_accuracy}% · since ${esc(shortDay(b.beaten.first_defeated_at))}</div></div></div>` : '';
-  const body = `<div style="text-align:center">${bossSVG(b.ch, b.m.color, { state: s.status === 'defeated' ? 'defeated' : s.status === 'new' ? 'new' : 'fight', size: 120 })}</div>
-    <p class="note" style="text-align:center;margin:4px 0 10px">${esc(b.title)} · guards <b>${esc(b.m.short)} ${esc(shortCode(b.ch.code))} ${esc(b.ch.name)}</b></p>
-    <div class="hp big"><i style="--p:${s.hp}%"></i></div>
-    <div class="row between note num" style="margin-top:4px"><span>HP ${s.hp}%</span><span>${s.n ? `last 30: ${s.acc}% · ${s.n} answers` : 'no answers yet'}</span></div>
-    <p style="margin-top:10px"><b>${esc(lbl)}</b> · ${esc(why)}</p>${card}`;
-  const actions = viewing ? [{ label: 'Close', value: false }] : [{ label: 'Close', value: false }, { label: 'Fight (30 questions) →', value: true, cls: 'primary' }];
-  return sheet({ title: b.name, body, actions }).then(go => { if (go) fight(b.ch.chapter_id); });
+  const body = `<div style="text-align:center;background:radial-gradient(50% 60% at 50% 60%,${f.c}55,transparent 70%);border-radius:16px">${monsterSVG(b.ch, { phase: ph, size: 150 })}</div>
+    <p class="note" style="text-align:center;margin:6px 0 10px">${PHASES[ph].label} · ${esc(b.title)} · ${esc(f.name)}<br>guards <b>${esc(b.m.short)} ${esc(shortCode(b.ch.code))} ${esc(b.ch.name)}</b></p>
+    <div class="hp big"><i style="--p:${ph === 'sealed' ? 0 : s.hp}%"></i></div>
+    <div class="row between note num" style="margin-top:4px"><span>HP ${ph === 'sealed' ? 0 : s.hp}%</span><span>${s.n ? `last 30: ${s.acc}% · ${s.n} answers` : 'no answers yet'}</span></div>
+    <p style="margin-top:10px">${s.status === 'revived' ? '<b>It broke its seal!</b> ' : ''}${esc(PHASE_TEXT[ph])}</p>
+    ${b.beaten ? card : `<p class="note" style="margin-top:6px">Seal reward: technique card <b>${esc(b.tech)}</b> + progress toward ${esc(f.name)} loot.</p>`}`;
+  const actions = viewing ? [{ label: 'Close', value: false }] : [{ label: 'Close', value: false }, { label: ph === 'sealed' ? 'Train again (30) →' : 'Fight (30 questions) →', value: true, cls: 'primary' }];
+  return sheet({ title: ph === 'new' ? 'Unknown guardian' : b.name, body, actions }).then(go => { if (go) fight(b.ch.chapter_id); });
+}
+
+export function bindExam(root, d) {
+  const eb = root.querySelector('#exambtn');
+  if (!eb) return;
+  const { R } = d;
+  eb.onclick = async () => {
+    const ok = await sheet({ title: `Gate challenge · ${d.rk.next.name}`, body: `<p>30 questions mixed from your <b>${d.beatNow}</b> sealed bosses. Pass with <b>${R.pass}%</b> or more to become <b>${esc(d.rk.next.name)}</b> (${esc(d.rk.next.belt)}).</p><p class="note" style="margin-top:8px">One try per day. Hints are allowed. If you leave halfway, today's try is used.</p>`,
+      actions: [{ label: 'Not yet', value: false }, { label: 'Start exam →', value: true, cls: 'primary' }] });
+    if (!ok) return;
+    eb.disabled = true; eb.textContent = 'Opening the gate…';
+    try { const a = await startRankExam(); navigate(`#/quiz/${a.attempt.id}`); }
+    catch (e) { toast(e.code === 'in_progress' ? 'Finish or leave your other practice first (see Home).' : e.message, 4000); eb.disabled = false; eb.textContent = 'Challenge the gate →'; }
+  };
 }
 
 export async function renderDojo() {
   show('dojo');
   const body = $('#dojo-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:50vh"><div class="spin"></div></div>';
-  let d;
-  let hp = { equipped: {} };
-  try { [d, hp] = await Promise.all([dojoData(true), loadHero(viewerId()).catch(() => ({ equipped: {} }))]); } catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
+  let d, hp = { equipped: {} };
+  try { [d, hp] = await Promise.all([dojoData(true), loadHero(viewerId()).catch(() => ({ equipped: {} }))]); } catch (e) { body.innerHTML = `<div class="nd-card">${esc(e.message)}</div>`; return; }
   const hctx = heroContext(d), heq = validEquip(hp.equipped, inventory(hctx), hctx);
-  const { cat, bosses, R, prog, viewing } = d;
-  const subs = cat.subjects.map(s => subjectMeta(s));
-  const shown = bosses.filter(b => filter === 'all' || b.m.key === filter);
-  const order = { revived: 0, cracked: 1, fight: 2, new: 3, defeated: 4 };
-  shown.sort((a, b) => order[a.st.status] - order[b.st.status] || a.st.hp - b.st.hp);
-  const owned = bosses.filter(b => b.beaten);
-  const shield = prog?.freeze_ready ? (prog?.freeze_needed ? '🛡️ Streak shield is protecting your streak today. Practise to keep it!' : '🛡️ Streak shield ready: miss one day and your streak survives (1× per week).')
-    : '🛡️ Streak shield used this week. It recharges 7 days after use.';
+  const { bosses, viewing, rk } = d;
+  const pr = { revived: 0, cracked: 1, boss: 2, elite: 3, minion: 4 };
+  const targets = bosses.filter(b => b.phase !== 'sealed' && b.phase !== 'new').sort((a, b) => ((b.st.status === 'revived') - (a.st.status === 'revived')) || (pr[a.phase] - pr[b.phase]) || a.st.hp - b.st.hp).slice(0, 3);
+  const fams = Object.keys(FAMILIES).map(k => ({ k, f: FAMILIES[k], list: bosses.filter(b => b.fam === k) })).filter(x => x.list.length);
+  const lv = hctx.lv;
 
-  body.innerHTML = `<div class="stack">
-    <div class="row between"><h1 style="font-size:34px">Dojo</h1>${viewing ? '<span class="note">Dad\'s view</span>' : ''}</div>
-    <button class="panel herocard" data-nav="#/hero" style="--belt:${d.rk.color}">
-      <div class="hc-art">${heroSVG({ stage: d.rk.rank, equipped: heq }, { w: 120, h: 180 })}</div>
-      <div class="grow" style="text-align:left"><div class="eyebrow" style="color:#CFC7EA">Your hero · ${esc(d.rk.belt)}</div>
-        <div class="rankname" style="color:#fff">${esc(d.rk.name)} <span class="num" style="font-size:18px;color:var(--volt)">Lv ${hctx.level}</span></div>
-        <div class="note" style="color:#CFC7EA">Equipment, inventory, skill tree and evolution</div>
-        <span class="btn small volt" style="margin-top:10px">Open hero →</span></div>
+  body.innerHTML = `<div class="nd-stack">
+    <div class="row between"><div><div class="nd-label">${viewing ? 'Dad\'s view · ' : ''}Mission control</div><div class="nd-h1">Dojo</div></div></div>
+    <button class="nd-card dj-hero" data-nav="#/hero" style="--belt:${rk.color}" aria-label="Open hero profile">
+      <div class="art">${heroSVG({ stage: rk.rank, equipped: heq }, { w: 220, h: 330, view: '230 60 564 1400' })}</div>
+      <div class="info">
+        <span class="belt-chip" style="--belt:${rk.color}"><i></i>${esc(rk.belt)}</span>
+        <div class="nd-h1" style="font-size:clamp(26px,5vw,36px)">${esc(rk.name)}</div>
+        <div class="lvl"><span class="nd-label">Level</span><b>${lv.level}</b><span class="nd-sub">${esc(lv.tier)}</span></div>
+        <div class="nd-bar"><i style="--p:${lv.pct}%"></i></div>
+        <div class="nd-sub nd-num" style="font-size:12px">${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
+        <span class="nd-btn small" style="align-self:flex-start;margin-top:6px">Hero profile →</span>
+      </div>
     </button>
-    <div class="dgrid">
-      ${rankPanel(d)}
-      <div class="stack" style="gap:14px">${kiPanel(prog, R)}<div class="panel sunk note" style="font-size:14px">${shield}</div></div>
-    </div>
-    <div>
-      <div class="row between" style="margin-bottom:8px;flex-wrap:wrap;gap:8px"><h3 style="font-size:22px">Bosses <span class="note num">${d.beatNow}/${bosses.length} sealed</span></h3></div>
-      <div class="chips" role="tablist">${[['all', 'All', 'var(--ink)'], ...subs.map(m => [m.key, m.short, m.color])].map(([k, l, c]) => `<button class="fchip ${k === filter ? 'on' : ''}" data-f="${k}" style="--c:${c}">${esc(l)}</button>`).join('')}</div>
-      <div class="bossgrid">${shown.map(b => bossTile(b)).join('')}</div>
-    </div>
-    <div>
-      <h3 style="font-size:22px;margin-bottom:8px">Technique cards <span class="note num">${owned.length}/${bosses.length}</span></h3>
-      <p class="note" style="margin:-4px 0 10px">Seal a boss to earn its card. Bronze from 80%, Silver from 90%, Gold from 95% (best accuracy).</p>
-      <div class="cardgrid">${bosses.map(b => b.beaten
-        ? `<div class="tcard ${cardTier(b.beaten.best_accuracy)}" style="--c:${b.m.color}">${cardSVG(b.ch, b.m.color, cardTier(b.beaten.best_accuracy), { size: 88 })}<b>${esc(b.tech)}</b><span class="note">${esc(b.m.short)} ${esc(shortCode(b.ch.code))} · ${TIER_LABEL[cardTier(b.beaten.best_accuracy)]}</span></div>`
-        : `<div class="tcard locked">${cardSVG(b.ch, b.m.color, 'bronze', { locked: true, size: 88 })}<b>???</b><span class="note">${esc(b.m.short)} ${esc(shortCode(b.ch.code))}</span></div>`).join('')}</div>
-    </div>
+    ${missionRow(d)}
+    ${gateCard(d)}
+    ${targets.length ? `<div><div class="nd-sec"><div class="nd-h2">Priority hunt</div><button class="nd-link" data-nav="#/bosses">All bosses →</button></div>
+      <div class="targets">${targets.map(bossCard).join('')}</div></div>` : ''}
+    <div><div class="nd-sec"><div class="nd-h2">Monster families</div><span class="nd-sub nd-num">${d.beatNow}/${bosses.length} sealed</span></div>
+      <div class="fam-list">${fams.map(({ k, f, list }) => { const sealed = list.filter(b => b.phase === 'sealed').length; return `<button class="fam-row" data-nav="#/bosses/${k}" style="--fc:${f.c}">
+        ${familyEmblem(k, 42)}<div style="min-width:0"><b>${esc(f.name)}</b> <span class="nd-sub" style="font-size:12px">· ${esc(list[0].m.short)}</span><div class="nd-bar"><i style="--p:${Math.round(100 * sealed / list.length)}%;--bc:${f.c}"></i></div></div>
+        <span class="nd-sub nd-num">${sealed}/${list.length} ›</span></button>`; }).join('')}</div></div>
   </div>`;
   body.dataset.ready = '1';
-
-  $$('[data-f]', body).forEach(b => b.onclick = () => { filter = b.dataset.f; renderDojo(); });
   $$('[data-boss]', body).forEach(el => el.onclick = () => openBoss(bosses.find(b => b.ch.chapter_id === el.dataset.boss), viewing));
-  const eb = $('#exambtn');
-  if (eb) eb.onclick = async () => {
-    const ok = await sheet({ title: `Rank exam · ${d.rk.next.name}`, body: `<p>30 questions mixed from your <b>${d.beatNow}</b> sealed bosses. Pass with <b>${R.pass}%</b> or more to become <b>${esc(d.rk.next.name)}</b> (${esc(d.rk.next.belt)}).</p><p class="note" style="margin-top:8px">One try per day. Hints are allowed. If you leave halfway, today's try is used.</p>`,
-      actions: [{ label: 'Not yet', value: false }, { label: 'Start exam →', value: true, cls: 'primary' }] });
-    if (!ok) return;
-    eb.disabled = true; eb.textContent = 'Preparing the exam…';
-    try { const a = await startRankExam(); navigate(`#/quiz/${a.attempt.id}`); }
-    catch (e) { toast(e.code === 'in_progress' ? 'Finish or leave your other practice first (see Home).' : e.message, 4000); eb.disabled = false; eb.textContent = 'Take the rank exam →'; }
-  };
+  bindExam(body, d);
 }
 
 export { RANKS };
@@ -192,7 +242,7 @@ export function homeDojo(d) {
     <div class="kibar ${n >= R.cap ? 'capped' : ''}"><i style="--p:${kiPct}%"></i></div>
     ${rk.ready && !viewing && !triedToday ? `<button class="btn volt block small" style="margin-top:10px" data-nav="#/dojo">🥋 Rank exam for ${esc(rk.next.name)} is open →</button>` : ''}
     ${next ? `<div class="nextboss" data-boss="${next.ch.chapter_id}" style="--c:${next.m.color}">
-      ${bossSVG(next.ch, next.m.color, { state: 'fight', size: 48 })}
+      ${monsterSVG(next.ch, { phase: next.phase, size: 52 })}
       <div class="grow"><div style="font-weight:900;color:var(--ink)">${next.st.status === 'revived' ? 'Came back: ' : 'Next boss: '}${esc(next.name)}</div>
       <div class="note">${esc(next.m.short)} ${esc(shortCode(next.ch.code))} · HP ${next.st.hp}%</div>
       <div class="hp"><i style="--p:${next.st.hp}%"></i></div></div>
