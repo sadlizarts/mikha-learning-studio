@@ -3,15 +3,15 @@
 // Exam Gate Bosses guard each belt. All shapes are original vector art (no licensed characters).
 
 export const FAMILIES = {
-  math: { name: 'Logic Constructs', lore: 'Living crystal geometry that guards the laws of number.', c: '#3D7BFF', d: '#183A94', g: '#A8D4FF', forms: ['Glyph Shard', 'Cube Sentinel', 'Crystal Golem', 'Theorem Warlord'] },
-  sci: { name: 'Elemental Lifeforms', lore: 'Seeds, stones and sparks that grew a will of their own.', c: '#2FD39A', d: '#0B6B4C', g: '#C9FFEA', forms: ['Sproutling', 'Leaf Sprite', 'Crystal Brute', 'Grove Titan'] },
-  eng: { name: 'Story Phantoms', lore: 'Stories that escaped the page and twist meaning.', c: '#9B6BFF', d: '#3F2496', g: '#E6DAFF', forms: ['Ink Blot', 'Hooded Quill', 'Scroll Wraith', 'Lexicon Lord'] },
-  ind: { name: 'Narrative Spirits', lore: 'Masked fire-spirits woven from words and their meanings.', c: '#FF5A5F', d: '#8E1A27', g: '#FFD3C7', forms: ['Api Wisp', 'Topeng Imp', 'Topeng Dancer', 'Hikayat Sovereign'] },
-  pan: { name: 'Law Sentinels', lore: 'Armoured guardians of rules, rights and duty.', c: '#FFB627', d: '#8A5200', g: '#FFE8A6', forms: ['Bolt Sentry', 'Shield Squire', 'Oath Knight', 'Justice Seraph'] },
-  aga: { name: 'Virtue Spirits', lore: 'Gentle lights that test patience, honesty and kindness.', c: '#36C9D3', d: '#0C5E68', g: '#D2F8FB', forms: ['Glimmer Wisp', 'Lantern Acolyte', 'Orb Keeper', 'Moon Sage'] },
+  math: { name: 'Logic Constructs', lore: 'Crystal beings born from logic and patterns. They turn numbers and shapes into power.', c: '#3D7BFF', d: '#183A94', g: '#A8D4FF', forms: ['Cube Bit', 'Shard Sentinel', 'Crystal Golem', 'Theorem Warlord'] },
+  sci: { name: 'Elemental Lifeforms', lore: 'Life shaped by elements and experiments. Even a small spark can grow into a new world.', c: '#2FD39A', d: '#0B6B4C', g: '#C9FFEA', forms: ['Sproutling', 'Crystal Sprout', 'Grove Golem', 'Grove Sovereign'] },
+  eng: { name: 'Story Phantoms', lore: 'Phantoms born from stories and words. They turn language into magic.', c: '#9B6BFF', d: '#3F2496', g: '#E6DAFF', forms: ['Ink Hood', 'Book Wraith', 'Scroll Wraith', 'Lexicon Lord'] },
+  ind: { name: 'Narrative Spirits', lore: 'Masked fire-spirits of stories and imagination that guard culture and meaning.', c: '#FF5A5F', d: '#8E1A27', g: '#FFD3C7', forms: ['Api Wisp', 'Topeng Imp', 'Topeng Dancer', 'Hikayat Sovereign'] },
+  pan: { name: 'Law Sentinels', lore: 'Sentinels of the five principles: justice, harmony, unity, deliberation and welfare.', c: '#FFB627', d: '#8A5200', g: '#FFE8A6', forms: ['Bolt Sentry', 'Shield Squire', 'Oath Knight', 'Justice Seraph'] },
+  aga: { name: 'Virtue Spirits', lore: 'Spirits of virtue and reflection: balance, compassion and the light that guides.', c: '#36C9D3', d: '#0C5E68', g: '#D2F8FB', forms: ['Little Acolyte', 'Orb Acolyte', 'Lantern Guardian', 'Moon Sage'] },
 };
-/** Art version folder/prefix for painted sprites (v2.2.0: sheet 3, four tiers). */
-const ART_V = 'mon2';
+/** Art version folder/prefix for painted sprites (v2.2.1: per-family sheets, four tiers). */
+const ART_V = 'mon3';
 export const monsterSrc = (fam, tier) => `hero/${ART_V}-${fam}-${tier}.webp`;
 export const GATE_ORDER = ['math', 'sci', 'eng', 'ind', 'pan', 'aga'];
 const PREFIX = { M7: 'math', S7: 'sci', E8: 'eng', BI7: 'ind', PP7: 'pan', PAI7: 'aga' };
