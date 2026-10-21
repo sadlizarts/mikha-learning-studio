@@ -56,7 +56,7 @@ export async function renderStudent(body) {
         <td>${esc(chaptersLabel(a.chapter_ids, idx))}</td>
         <td class="r num">${a.status === 'completed' ? `<span class="tag ${scoreCls(a.score) === 'good' ? 'ok' : scoreCls(a.score) === 'low' ? 'bad' : 'warn'}">${a.score}</span>` : `<span class="tag mute">${esc(a.status)} ${a.answered_count}/${a.total_questions}</span>`}</td>
         <td class="r num">${a.duration_s ? fmtDur(a.duration_s) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No sessions yet.</p>'}
-      ${hidden ? `<p class="note" style="margin-top:6px">${hidden} abandoned session${hidden > 1 ? 's' : ''} with fewer than ${HIDE} answers hidden (answers still count in the chapter stats).</p>` : ''}
+      ${hidden ? `<p class="note" style="margin-top:6px">${hidden} unfinished session${hidden > 1 ? 's' : ''} hidden${HIDE < 1000 ? ` (fewer than ${HIDE} answers)` : ''}. Their answers still count in the chapter stats and the Subjects tab.</p>` : ''}
     </div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Most missed questions</div>
       <div class="stack" style="gap:8px">${mq.map(q => `<button class="qrow" data-q="${q.id}"><div class="note">${esc(chapterLabel(idx, q.chapter_id))}</div><div class="s">${esc(q.stem)}</div><div style="margin-top:6px">${qTags(q, mStats[q.id])}</div></button>`).join('') || '<p class="note">Needs at least 3 answers per question.</p>'}</div>
