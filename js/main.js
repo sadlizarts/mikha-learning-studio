@@ -13,6 +13,7 @@ import { renderProgress } from './features/progress.js';
 import { renderAdmin } from './features/admin/index.js';
 import { renderLearn, renderLesson } from './features/learn.js';
 import { renderSchedule } from './features/schedule.js';
+import { renderDojo } from './features/dojo.js';
 
 window.MLS = { app };
 
@@ -47,6 +48,7 @@ async function boot() {
   route('learn', renderLearn);
   route('lesson', renderLesson);
   route('schedule', renderSchedule);
+  route('dojo', renderDojo);
 
   startRouter();
   if (redirect?.startsWith('error:')) toast(`That reset link did not work (${redirect.slice(6)}). Ask for a new one.`, 6000);
