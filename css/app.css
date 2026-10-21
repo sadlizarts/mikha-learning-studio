@@ -402,3 +402,43 @@ html.wide .split{grid-template-columns:1fr 1fr}
 /* v1.7.3: Arabic runs inside questions/lessons (tajwid, ayat) */
 .ar{font-family:'Amiri Quran','Amiri','Geeza Pro','Noto Naskh Arabic',serif;font-weight:400;font-size:1.45em;line-height:1.9;unicode-bidi:isolate;direction:rtl;letter-spacing:0}
 .opt .ar{font-size:1.35em}
+
+/* ---------- home grid (v1.7.7): phones keep the old order, laptops get two columns ---------- */
+.hgrid{display:flex;flex-direction:column;gap:14px}
+.hmain,.hside{display:contents}
+.kbdhint{display:none}
+kbd{font-family:var(--body);font-weight:900;font-size:12px;border:2px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:0 5px;background:var(--card);color:var(--ink)}
+
+/* ---------- desktop / laptop (v1.7.7, Sadli 21 Oct 2026): left sidebar, wider centred content ---------- */
+@media (min-width:1024px){
+  :root{--side-w:232px}
+  #app,html.wide #app{max-width:1320px}
+  .tabbar{top:0;bottom:0;right:auto;width:var(--side-w);height:auto;flex-direction:column;justify-content:flex-start;gap:6px;padding:22px 14px;border-top:0;border-right:3px solid var(--line)}
+  .tabbar::before{content:'MIKHA\A LEARNING STUDIO';white-space:pre;font-family:var(--display);font-size:22px;line-height:1.05;color:var(--ink);padding:2px 10px 20px;letter-spacing:.02em}
+  .tab{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;min-height:54px;padding:0 8px;font-size:14px;border-radius:12px}
+  .tab:hover{background:var(--paper-2);color:var(--ink)}
+  html.has-tabs .screen{left:var(--side-w)}
+  html.has-tabs .toast{left:calc(var(--side-w) + 24px);bottom:24px}
+  .scroll{padding:28px 40px 40px}
+  html.has-tabs .scroll{padding-bottom:40px}
+  .scroll > *{max-width:900px;margin-left:auto;margin-right:auto}
+  #home-body > *{max-width:1100px}
+  #admin-body > *,html.wide .scroll > *{max-width:1200px}
+  .top,.qtop{width:100%;max-width:980px;margin-left:auto;margin-right:auto;padding-left:40px;padding-right:40px}
+  .greet h1{font-size:40px}
+  .hgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;align-items:start}
+  .hmain,.hside{display:flex;flex-direction:column;gap:16px}
+  .hitem{order:0!important}
+  .hside .statrow{grid-template-columns:1fr 1fr}
+  .lgrid{display:grid!important;grid-template-columns:1fr 1fr;gap:12px!important}
+  #qscroll > .stack{max-width:780px}
+  .qcard .stem{font-size:21px}
+  .opt:hover:not(:disabled){transform:translate(-1px,-1px)}
+  .kbdhint{display:block;text-align:center;margin-top:6px}
+  .sticky-cta{left:50%;right:auto;width:min(100%,980px);transform:translateX(-50%);padding-left:40px;padding-right:40px}
+  .sheet{align-items:center;justify-content:center}
+  .sheet .panel{max-width:520px}
+  .lsheet{align-items:center;justify-content:center}
+  .lsheet .body{width:min(860px,92%);height:88%;border:3px solid var(--line);border-radius:18px}
+}
+@media (min-width:1024px) and (hover:none){.kbdhint{display:none}}
