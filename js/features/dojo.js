@@ -1,6 +1,8 @@
 // Dojo screen (v1.8.0): rank + rank exam, today's Ki (daily target / XP cap), streak shield, bosses per chapter, technique cards.
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast, jakartaDate, shortDay } from '../ui.js';
-import { loadProgress, progressOf, loadDojo, startAttempt, startRankExam } from '../store.js';
+import { loadProgress, progressOf, loadDojo, startAttempt, startRankExam, loadHero } from '../store.js';
+import { heroSVG } from '../hero/art.js';
+import { heroContext, inventory, validEquip } from '../hero/items.js';
 import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 import { RANKS, rules, bossName, techName, bossState, bossSVG, cardSVG, beltSVG, cardTier, TIER_LABEL, rankInfo } from '../dojo.js';
@@ -118,7 +120,9 @@ export async function renderDojo() {
   const body = $('#dojo-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:50vh"><div class="spin"></div></div>';
   let d;
-  try { d = await dojoData(true); } catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
+  let hp = { equipped: {} };
+  try { [d, hp] = await Promise.all([dojoData(true), loadHero(viewerId()).catch(() => ({ equipped: {} }))]); } catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
+  const hctx = heroContext(d), heq = validEquip(hp.equipped, inventory(hctx), hctx);
   const { cat, bosses, R, prog, viewing } = d;
   const subs = cat.subjects.map(s => subjectMeta(s));
   const shown = bosses.filter(b => filter === 'all' || b.m.key === filter);
@@ -130,6 +134,13 @@ export async function renderDojo() {
 
   body.innerHTML = `<div class="stack">
     <div class="row between"><h1 style="font-size:34px">Dojo</h1>${viewing ? '<span class="note">Dad\'s view</span>' : ''}</div>
+    <button class="panel herocard" data-nav="#/hero" style="--belt:${d.rk.color}">
+      <div class="hc-art">${heroSVG({ stage: d.rk.rank, equipped: heq }, { w: 120, h: 180 })}</div>
+      <div class="grow" style="text-align:left"><div class="eyebrow" style="color:#CFC7EA">Your hero · ${esc(d.rk.belt)}</div>
+        <div class="rankname" style="color:#fff">${esc(d.rk.name)} <span class="num" style="font-size:18px;color:var(--volt)">Lv ${hctx.level}</span></div>
+        <div class="note" style="color:#CFC7EA">Equipment, inventory, skill tree and evolution</div>
+        <span class="btn small volt" style="margin-top:10px">Open hero →</span></div>
+    </button>
     <div class="dgrid">
       ${rankPanel(d)}
       <div class="stack" style="gap:14px">${kiPanel(prog, R)}<div class="panel sunk note" style="font-size:14px">${shield}</div></div>
