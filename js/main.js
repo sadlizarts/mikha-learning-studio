@@ -14,6 +14,7 @@ import { renderAdmin } from './features/admin/index.js';
 import { renderLearn, renderLesson } from './features/learn.js';
 import { renderSchedule } from './features/schedule.js';
 import { renderDojo } from './features/dojo.js';
+import { renderHero } from './features/hero.js';
 
 window.MLS = { app };
 
@@ -49,6 +50,7 @@ async function boot() {
   route('lesson', renderLesson);
   route('schedule', renderSchedule);
   route('dojo', renderDojo);
+  route('hero', renderHero);
 
   startRouter();
   if (redirect?.startsWith('error:')) toast(`That reset link did not work (${redirect.slice(6)}). Ask for a new one.`, 6000);
