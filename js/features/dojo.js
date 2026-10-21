@@ -7,7 +7,7 @@ import { heroContext, inventory, validEquip } from '../hero/items.js';
 import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 import { RANKS, rules, bossName, techName, bossState, bossSVG, cardSVG, beltSVG, cardTier, TIER_LABEL, rankInfo } from '../dojo.js';
-import { FAMILIES, familyOf, phaseOf, formName, PHASES, monsterSVG, gateSVG, familyEmblem, familyPortrait } from '../monsters.js';
+import { FAMILIES, familyOf, phaseOf, formName, PHASES, monsterSVG, gateSVG, familyEmblem, familyPortrait, examBoss, GATE_ORDER } from '../monsters.js';
 
 
 const STATUS = {
@@ -123,13 +123,16 @@ export function bossCard(b) {
 /** Exam Gate Boss card. */
 export function gateCard(d) {
   const { rk, R, viewing, triedToday } = d;
-  if (!rk.next) return `<div class="nd-card gate-card" style="--belt:${rk.color}">${gateSVG(rk.color, { size: 150 })}<div><div class="nd-label">Final gate</div><div class="nd-h2">All gates opened</div><p class="nd-sub">You are a ${esc(rk.name)}. Keep every seal strong.</p></div></div>`;
+  const have = GATE_ORDER.filter(k => d.bosses.some(b => b.fam === k)), order = have.length ? have : GATE_ORDER;
+  const gf = order[((rk.rank || 0) + (rk.next ? 1 : 0)) % order.length], gk = FAMILIES[gf];
+  if (!rk.next) return `<div class="nd-card gate-card" style="--belt:${rk.color}">${examBoss(gf, { size: 150, belt: rk.color })}<div><div class="nd-label">Final gate</div><div class="nd-h2">All gates opened</div><p class="nd-sub">You are a ${esc(rk.name)}. Keep every seal strong.</p></div></div>`;
   const pct = Math.min(100, Math.round(100 * rk.have / rk.need));
   const action = viewing ? '' : rk.ready ? (triedToday ? '<p class="nd-sub" style="margin-top:8px">You challenged the gate today. Train and return tomorrow.</p>' : '<button class="nd-btn primary" id="exambtn" style="margin-top:10px">Challenge the gate →</button>') : '';
   return `<div class="nd-card gate-card ${rk.ready ? 'emph' : ''}" style="--belt:${rk.next.color};--em:${rk.next.color === '#F4F1EA' ? '#FFD25A' : rk.next.color}">
-    <div>${gateSVG(rk.next.color, { size: 150, locked: !rk.ready })}</div>
-    <div style="min-width:0"><div class="nd-label">Exam Gate Boss · ${esc(rk.next.belt)}</div>
-      <div class="nd-h2" style="margin:4px 0 6px">Gatekeeper of ${esc(rk.next.name)}</div>
+    <div>${examBoss(gf, { size: 150, locked: !rk.ready, belt: rk.next.color })}</div>
+    <div style="min-width:0"><div class="nd-label">Exam Boss · ${esc(rk.next.belt)} gate</div>
+      <div class="nd-h2" style="margin:4px 0 2px">${esc(gk.forms[3])}</div>
+      <p class="nd-sub" style="font-size:12px;margin-bottom:6px">${esc(gk.name)} · guards the path to ${esc(rk.next.name)}</p>
       <p class="nd-sub">${rk.ready ? `Open: 30 questions from your sealed bosses. Pass with ${R.pass}% to evolve.` : `Seal ${rk.need - rk.have} more boss${rk.need - rk.have === 1 ? '' : 'es'} to open this gate.`}</p>
       <div class="nd-bar" style="margin-top:10px"><i style="--p:${pct}%;--bc:linear-gradient(90deg,${rk.next.color === '#F4F1EA' ? '#fff' : rk.next.color},#FFD25A)"></i></div>
       <div class="nd-sub nd-num" style="margin-top:4px;font-size:12px">${rk.have}/${rk.need} sealed</div>${action}</div>
@@ -166,7 +169,9 @@ export function openBoss(b, viewing) {
     <p style="margin-top:10px">${s.status === 'revived' ? '<b>It broke its seal!</b> ' : ''}${esc(PHASE_TEXT[ph])}</p>
     ${b.beaten ? card : `<p class="note" style="margin-top:6px">Seal reward: technique card <b>${esc(b.tech)}</b> + progress toward ${esc(f.name)} loot.</p>`}`;
   const actions = viewing ? [{ label: 'Close', value: false }] : [{ label: 'Close', value: false }, { label: ph === 'sealed' ? 'Train again (30) →' : 'Fight (30 questions) →', value: true, cls: 'primary' }];
-  return sheet({ title: ph === 'new' ? 'Unknown guardian' : b.name, body, actions }).then(go => { if (go) fight(b.ch.chapter_id); });
+  const p = sheet({ title: ph === 'new' ? 'Unknown guardian' : b.name, body, actions }).then(go => { if (go) fight(b.ch.chapter_id); });
+  setTimeout(() => document.querySelectorAll('.sheet .mon-wrap').forEach(w => w.onclick = () => { w.classList.remove('hit'); void w.offsetWidth; w.classList.add('hit'); }), 50);
+  return p;
 }
 
 export function bindExam(root, d) {

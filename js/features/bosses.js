@@ -29,7 +29,7 @@ export async function renderBosses(famArg) {
       ${fams.map(k => `<button class="nd-chip ${fam === k ? 'on' : ''}" style="--c:${FAMILIES[k].c}" data-nav="#/bosses/${k}">${familyEmblem(k, 30)}${esc(FAMILIES[k].name)}</button>`).join('')}
     </div>
     ${f ? `<div class="nd-card fam-banner" style="--fc:${f.c}">${familyPortrait(fam, 96)}<div style="min-width:0"><div class="nd-label">${esc(list[0].m.short)} family</div><div class="nd-h2">${esc(f.name)}</div><p class="nd-sub">${esc(f.lore)}</p>
-      <p class="nd-sub" style="font-size:12px;margin-top:4px">Forms: ${f.forms.map(esc).join(' → ')}</p></div><div style="text-align:right"><div class="nd-h1 nd-num" style="font-size:30px">${sealed}/${list.length}</div><div class="nd-label">sealed</div></div></div>` : gateCard(d)}
+      <p class="nd-sub" style="font-size:12px;margin-top:4px">Forms: ${f.forms.slice(0, 3).map(esc).join(' → ')} · Exam Boss: ${esc(f.forms[3])}</p></div><div style="text-align:right"><div class="nd-h1 nd-num" style="font-size:30px">${sealed}/${list.length}</div><div class="nd-label">sealed</div></div></div>` : gateCard(d)}
     <div class="row between" style="flex-wrap:wrap;gap:10px">
       <div class="nd-tabs" style="flex:1 1 300px;max-width:440px">${[['hunt', `Hunting ${list.length - sealed}`], ['sealed', `Sealed ${sealed}`], ['all', 'All']].map(([k, l]) => `<button class="${view === k ? 'on' : ''}" data-v="${k}">${l}</button>`).join('')}</div>
       <div class="row" style="gap:6px;flex-wrap:wrap">${[['boss', 'Boss'], ['elite', 'Elite'], ['minion', 'Minion']].map(([k, l]) => `<span class="nd-pill">${l} ${count(k)}</span>`).join('')}</div>
