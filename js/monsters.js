@@ -102,8 +102,15 @@ const ART = {
 
 const SEAL = `<g transform="rotate(-16 60 58)"><rect x="50" y="16" width="20" height="84" rx="2" fill="#FFF4D2" stroke="${INK}" stroke-width="2"/><path d="M55 26h10M55 34h10M60 42v34M55 52h10M54 66l12 6M55 84h10" stroke="#E8473C" stroke-width="2.2" stroke-linecap="round"/></g>`;
 
-/** Monster portrait. phase: new | minion | elite | boss | sealed */
-export function monsterSVG(ch, { phase = 'boss', size = 96, uid = '' } = {}) {
+const SEAL_OVERLAY = `<svg class="seal-ov" viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-16 60 58)"><rect x="50" y="16" width="20" height="84" rx="2" fill="#FFF4D2" stroke="${INK}" stroke-width="2"/><path d="M55 26h10M55 34h10M60 42v34M55 52h10M54 66l12 6M55 84h10" stroke="#E8473C" stroke-width="2.2" stroke-linecap="round"/></g></svg>`;
+/** Painted monster portrait (v2.1.0, from Sadli's concept sheet). phase: new | minion | elite | boss | sealed. */
+export function monsterSVG(ch, { phase = 'boss', size = 96 } = {}) {
+  const fam = familyOf(ch), r = rng(seedOf('mon:' + ch.code));
+  const hue = Math.round((r() - 0.5) * 36), form = phase === 'minion' ? 'minion' : phase === 'elite' ? 'elite' : 'boss';
+  return `<span class="mon-wrap mon-${phase}" style="width:${size}px;height:${size}px"><img src="hero/mon-${fam}-${form}.webp" alt="" width="${size}" height="${size}" style="filter:hue-rotate(${hue}deg)" decoding="async">${phase === 'new' ? '<b class="mon-q">?</b>' : ''}${phase === 'sealed' ? SEAL_OVERLAY : ''}</span>`;
+}
+/** Vector fallback kept for reference / offline art. */
+export function monsterVector(ch, { phase = 'boss', size = 96, uid = '' } = {}) {
   const fam = familyOf(ch), base = FAMILIES[fam];
   const r = rng(seedOf('mon:' + ch.code));
   const hueK = (r() - 0.5) * 0.3, hue = Math.round((r() - 0.5) * 70), tilt = ((r() - 0.5) * 8).toFixed(1), sc = (0.92 + r() * 0.14).toFixed(3);
@@ -144,6 +151,7 @@ export function gateSVG(color, { size = 140, locked = false } = {}) {
 }
 
 /** Family emblem (small round badge). */
+export const familyPortrait = (fam, size = 64) => `<img class="fam-pic" src="hero/mon-${fam}-big.webp" width="${size}" height="${size}" alt="" decoding="async">`;
 export function familyEmblem(fam, size = 40) {
   const f = FAMILIES[fam];
   const glyph = { math: 'M14 26 L20 12 L26 26 Z M12 22 h16', sci: 'M20 10 L26 20 L20 30 L14 20 Z', eng: 'M14 28 C18 18 24 12 28 10 C24 16 22 22 20 30 Z', ind: 'M20 10 L28 20 L20 30 L12 20 Z M20 30 v6', pan: 'M12 12 h16 v10 c0 6 -4 9 -8 11 c-4 -2 -8 -5 -8 -11 Z', aga: 'M20 10 a8 10 0 1 0 0.1 0 Z' }[fam];
