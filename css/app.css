@@ -392,6 +392,7 @@ html.wide .split{grid-template-columns:1fr 1fr}
 .plan .pt{font-weight:900;color:var(--ink);font-size:15.5px;line-height:1.25}
 .planline{color:var(--ink-2)}
 .viewbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border-left:8px solid var(--ink)}
+.viewbar > .grow{flex:1 1 260px;min-width:0} /* v1.7.6: text keeps its width; buttons wrap below on phones */
 
 /* Admin → Viewer (read-only question cards) */
 .vq .opt{cursor:default;box-shadow:none;min-height:48px}
