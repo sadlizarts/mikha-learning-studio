@@ -1,7 +1,7 @@
-// Hash router: #/login #/home #/pick #/quiz/<id> #/result/<id> #/session/<id> #/history #/learn #/progress
+// Hash router: #/login #/home #/pick #/quiz/<id> #/result/<id> #/session/<id> #/history #/learn #/progress #/dojo
 import { $, $$ } from './ui.js';
 
-const TABS = ['home', 'learn', 'progress', 'history'];
+const TABS = ['home', 'dojo', 'learn', 'progress', 'history'];
 const routes = {};
 let guard = () => true;
 let current = null;

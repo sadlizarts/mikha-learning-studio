@@ -48,7 +48,7 @@ export function sheet({ title, body = '', actions = [] }) {
     const wrap = document.createElement('div');
     wrap.className = 'sheet';
     wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', title);
-    wrap.innerHTML = `<div class="panel"><h3>${esc(title)}</h3>${body ? `<p>${body}</p>` : ''}
+    wrap.innerHTML = `<div class="panel"><h3>${esc(title)}</h3>${body ? (body.trim().startsWith('<') ? `<div class="sbody">${body}</div>` : `<p>${body}</p>`) : ''}
       <div class="stack" style="gap:10px">${actions.map((a, i) => `<button class="btn block ${a.cls || ''}" data-i="${i}">${esc(a.label)}</button>`).join('')}</div></div>`;
     const close = (v) => { wrap.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
     const onKey = (e) => { if (e.key === 'Escape') close(null); };

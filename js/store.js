@@ -19,6 +19,7 @@ function toAppError(err) {
   if (!navigator.onLine || /Failed to fetch|NetworkError|Load failed|network/i.test(msg)) return new AppError('network', MSG.network, err);
   if (/JWT|not authenticated|401/i.test(msg)) return new AppError('auth', MSG.auth, err);
   if (/attempt in progress/i.test(msg)) return new AppError('in_progress', 'You have a practice in progress.', err);
+  if (/beat \d+ bosses first|one rank exam per day|top rank|exams are for the student/i.test(msg)) return new AppError('exam', msg.replace(/^.*?(beat|one|already|rank)/i, (m, w) => w.charAt(0).toUpperCase() + w.slice(1)), err);
   if (/not enough questions/i.test(msg)) return new AppError('too_few', 'Not enough questions in these chapters yet.', err);
   if (/already answered/i.test(msg) || err?.code === '23505') return new AppError('already', 'Already answered.', err);
   if (/503|504|upstream|timeout/i.test(msg)) return new AppError('waking', MSG.waking, err);
@@ -104,11 +105,32 @@ export async function loadCatalog(userId) {
 export async function loadProgress() { return run(sb.rpc('my_progress')); }
 /** Same shape as my_progress() for another user (admin monitor; RLS lets admin read user_progress). */
 export async function progressOf(userId) {
-  const rows = await run(sb.from('user_progress').select('xp_total, current_streak, best_streak, last_completed_date').eq('user_id', userId).limit(1));
+  const [rows, today] = await Promise.all([
+    run(sb.from('user_progress').select('xp_total, current_streak, best_streak, last_completed_date, rank, freeze_used_on').eq('user_id', userId).limit(1)),
+    run(sb.rpc('daily_answers', { p_user: userId })).catch(() => 0),
+  ]);
   const p = rows[0] || {};
-  const yest = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date(Date.now() - 86400000));
-  return { xp_total: p.xp_total || 0, best_streak: p.best_streak || 0, last_completed_date: p.last_completed_date || null,
-    current_streak: p.last_completed_date && String(p.last_completed_date) >= yest ? (p.current_streak || 0) : 0 };
+  const day = (n) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date(Date.now() - n * 86400000));
+  const last = p.last_completed_date ? String(p.last_completed_date) : null;
+  const freezeReady = !p.freeze_used_on || String(p.freeze_used_on) <= day(7);
+  const alive = last && (last >= day(1) || (last === day(2) && freezeReady));
+  return { xp_total: p.xp_total || 0, best_streak: p.best_streak || 0, last_completed_date: last, rank: p.rank || 0,
+    freeze_ready: freezeReady, freeze_needed: last === day(2), answers_today: +today || 0,
+    current_streak: alive ? (p.current_streak || 0) : 0 };
+}
+
+/* ---------------- dojo (v1.8.0) ---------------- */
+export async function loadDojo(userId) {
+  const [beaten, exams] = await Promise.all([
+    run(sb.from('boss_defeats').select('chapter_id, first_defeated_at, best_accuracy').eq('user_id', userId)),
+    run(sb.from('rank_exams').select('rank, score, passed, taken_at').eq('user_id', userId).order('taken_at', { ascending: false }).limit(20)).catch(() => []),
+  ]);
+  return { beaten: Object.fromEntries((beaten || []).map(b => [b.chapter_id, b])), exams: exams || [] };
+}
+export async function startRankExam() {
+  const data = await run(sb.rpc('start_rank_exam'));
+  cacheAttempt(data);
+  return data;
 }
 
 export async function abandonStale() {
