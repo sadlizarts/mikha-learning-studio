@@ -60,7 +60,7 @@ export class HeroStage {
   }
 
   layout() {
-    const w = this.app.renderer.width / this.app.renderer.resolution, h = this.app.renderer.height / this.app.renderer.resolution;
+    const w = this.app.screen.width, h = this.app.screen.height;   // CSS pixels (renderer.width already excludes resolution in v8)
     this.vw = w; this.vh = h;
     const s = Math.min((h * 0.74) / 1350, (w * 0.9) / 760);
     this.scale = s;
