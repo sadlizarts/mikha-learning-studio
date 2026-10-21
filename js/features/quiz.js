@@ -6,6 +6,7 @@ import { catalog, chapterIndex } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
 import { lessonsMeta, hasAnchor, openLessonSheet } from './learn.js';
 import { anchorLabel } from '../lesson-md.js';
+import { RANKS } from '../dojo.js';
 
 const OK_WORDS = ['NICE!', 'BOOM!', 'SHARP!', 'GOT IT!', 'CLEAN!'];
 const BAD_WORDS = ['ALMOST', 'NOT YET', 'HMM…'];
@@ -37,6 +38,12 @@ export async function renderQuiz(id) {
   if (open === -1) { finish(); return; }
   S.i = open;
   $('#progwrap').setAttribute('aria-valuemax', S.qs.length);
+  const eb = $('#exambanner'), er = data.attempt.exam_rank;
+  eb.hidden = !er;
+  if (er) {
+    let pass = 85; try { pass = +(await catalog()).rules?.exam_pass || 85; } catch { /* default */ }
+    eb.innerHTML = `🥋 <b>Rank exam · ${esc((RANKS[er] || {}).name || '')}</b> <span>Pass with ${pass}% or more</span>`;
+  }
   renderQ();
 }
 
@@ -132,6 +139,7 @@ async function choose(orig) {
   $('#progwrap').setAttribute('aria-valuenow', done);
   const c = $('#combo');
   if (S.combo >= 3) { c.textContent = `🔥 ${S.combo} in a row!`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
+  if (ok && S.combo >= 5 && S.combo % 5 === 0) surge(S.combo);
   const last = firstOpen() === -1;
   $('#nextbtn').textContent = last ? 'See results →' : 'Next →';
   $('#feedback').hidden = false;
@@ -140,6 +148,14 @@ async function choose(orig) {
   const attemptId = S.data.attempt.id;
   const synced = await saveAnswer(attemptId, q.question_id, orig, q.answer.hint_level, ms);
   if (!synced && qAt() === q) $('#syncnote').hidden = false;
+}
+
+const SURGE = ['KI SURGE!', 'SPIRIT BURST!', 'UNSTOPPABLE!', 'LEGEND MODE!', 'PERFECT FLOW!', 'GRANDMASTER!'];
+function surge(n) {
+  const el = $('#surge');
+  el.innerHTML = `<b>${SURGE[Math.min(SURGE.length, n / 5) - 1]}</b><span class="num">×${n} combo</span>`;
+  el.hidden = false; el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  clearTimeout(surge.t); surge.t = setTimeout(() => { el.hidden = true; }, reducedMotion() ? 1200 : 1500);
 }
 
 async function next() {

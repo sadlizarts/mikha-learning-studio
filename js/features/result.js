@@ -1,7 +1,9 @@
 // Result (DESIGN §5.5) — also the read-only session detail opened from History.
 import { rich, $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reducedMotion } from '../ui.js';
-import { getAttempt, startAttempt } from '../store.js';
-import { catalog, chapterIndex } from '../state.js';
+import { getAttempt, startAttempt, loadDojo, loadProgress } from '../store.js';
+import { dojoFrom, openBoss } from './dojo.js';
+import { RANKS, bossSVG, cardSVG, beltSVG, cardTier, TIER_LABEL } from '../dojo.js';
+import { app, catalog, chapterIndex } from '../state.js';
 import { show, navigate } from '../router.js';
 import { lessonsMeta, hasAnchor, openLessonSheet } from './learn.js';
 import { anchorLabel } from '../lesson-md.js';
@@ -71,6 +73,15 @@ export async function renderResult(id, { fresh }) {
     if (after.level > before.level) levelUp = `<div class="panel" style="border-left:8px solid var(--volt)"><div class="eyebrow">Level up</div><b style="color:var(--ink);font-size:18px">You reached Level ${after.level} · ${after.tier}</b></div>`;
   }
 
+  // Dojo (v1.8.0): rank exam verdict, XP cap / streak shield notes, boss report
+  const er = a.exam_rank, ex = done?.exam;
+  const passMark = ex?.pass_mark || 85;
+  const examHtml = er ? (ex?.passed || (!ex && score >= passMark && !fresh)
+    ? `<div class="panel rankup" style="--belt:${RANKS[er]?.color}"><div class="row" style="gap:14px;align-items:center">${beltSVG(RANKS[er]?.color || '#fff', 72)}<div><div class="eyebrow">Rank exam passed</div><div class="rankname">${fresh ? 'RANK UP! ' : ''}${esc(RANKS[er]?.name || '')}</div><div class="note">${esc(RANKS[er]?.belt || '')}</div></div></div></div>`
+    : `<div class="panel sunk"><div class="eyebrow">Rank exam · ${esc(RANKS[er]?.name || '')}</div><b style="color:var(--ink)">${score}% — you need ${passMark}%.</b><div class="note">${fresh ? 'So close! Train your weakest bosses and try again tomorrow.' : 'Not passed.'}</div></div>`) : '';
+  const notes = fresh ? [done?.capped ? `<div class="panel sunk note" style="font-size:14px">⚡ Daily XP cap reached: only the first answers each day give XP. Your answers still train your bosses. Time to rest! 💤</div>` : '',
+    done?.froze ? `<div class="panel sunk note" style="font-size:14px">🛡️ Your streak shield saved your streak (you missed a day). It recharges in 7 days.</div>` : ''].join('') : '';
+
   body.innerHTML = `<div class="stack">
     <div class="panel result-hero">
       <div class="burst"></div>
@@ -85,6 +96,8 @@ export async function renderResult(id, { fresh }) {
     </div>
     <div class="xpgain"><span aria-hidden="true" style="font-size:22px">⚡</span><div class="grow">XP earned</div><b class="num">+${xp}</b></div>
     ${levelUp}
+    ${examHtml}${notes}
+    <div id="bossreport"></div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:10px">By chapter</div><div class="stack" style="gap:12px">${chapRows}</div></div>
     <div><h3 style="font-size:20px;margin-bottom:8px">Review mistakes${wrong.length ? ` <span class="note num">(${wrong.length})</span>` : ''}</h3><div class="stack" style="gap:10px">${mistakes}</div></div>
     <div class="row" style="gap:10px">
@@ -93,6 +106,7 @@ export async function renderResult(id, { fresh }) {
     </div>
   </div>`;
   if (fresh) countUp($('#scorebig'), score);
+  if (fresh && !a.is_preview) bossReport(a, done).catch(() => { /* report is a bonus */ });
   body.querySelectorAll('[data-read]').forEach(b => b.onclick = () => openLessonSheet(b.dataset.read, b.dataset.anchor));
   $('#result-body').scrollTop = 0;
 
@@ -106,4 +120,29 @@ export async function renderResult(id, { fresh }) {
       b.disabled = false; b.textContent = 'Again ↻';
     }
   };
+}
+
+async function bossReport(a, done) {
+  const el = $('#bossreport'); if (!el) return;
+  const [cat, prog, dj] = await Promise.all([catalog(), loadProgress(), loadDojo(app.user.id)]);
+  const d = dojoFrom(cat, prog, dj, false);
+  const fresh = new Set(done?.new_bosses || []);
+  const mine = d.bosses.filter(b => (a.chapter_ids || []).includes(b.ch.chapter_id));
+  if (!mine.length) return;
+  const sealed = mine.filter(b => fresh.has(b.ch.chapter_id));
+  const reveal = sealed.map(b => `<div class="panel sealed" style="--c:${b.m.color}">
+      <div class="eyebrow" style="color:var(--ok)">Boss sealed!</div>
+      <div class="row" style="gap:14px;align-items:center;justify-content:center;flex-wrap:wrap">
+        <div class="sealanim">${bossSVG(b.ch, b.m.color, { state: 'defeated', size: 96 })}</div>
+        <div class="flipcard"><div class="face">${cardSVG(b.ch, b.m.color, cardTier(b.beaten?.best_accuracy || 80), { size: 96 })}</div></div>
+      </div>
+      <p style="text-align:center;margin-top:8px"><b>${esc(b.name)}</b> is sealed. New technique card: <b>${esc(b.tech)}</b> (${TIER_LABEL[cardTier(b.beaten?.best_accuracy || 80)]}).</p>
+    </div>`).join('');
+  const rows = mine.filter(b => !fresh.has(b.ch.chapter_id)).map(b => `<button class="brow" data-boss="${b.ch.chapter_id}" style="--c:${b.m.color}">
+      ${bossSVG(b.ch, b.m.color, { state: b.st.status === 'defeated' ? 'defeated' : 'fight', size: 44 })}
+      <div class="grow"><div style="font-weight:900;color:var(--ink)">${esc(b.name)} <span class="note">· ${esc(b.m.short)} ${esc(shortCode(b.ch.code))}</span></div>
+      <div class="hp"><i style="--p:${b.st.hp}%"></i></div></div>
+      <span class="note num">${b.st.status === 'defeated' ? 'Sealed' : 'HP ' + b.st.hp + '%'}</span></button>`).join('');
+  el.innerHTML = `${reveal}${rows ? `<div class="panel"><div class="eyebrow" style="margin-bottom:8px">Boss report</div><div class="stack" style="gap:8px">${rows}</div></div>` : ''}`;
+  el.querySelectorAll('[data-boss]').forEach(x => x.onclick = () => openBoss(d.bosses.find(b => b.ch.chapter_id === x.dataset.boss), false));
 }

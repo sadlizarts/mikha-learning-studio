@@ -1,12 +1,13 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
 import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast } from '../ui.js';
-import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, changePassword, abandonAttempt, myGoals, loadAssessments, myLessonReads } from '../store.js';
+import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, changePassword, abandonAttempt, myGoals, loadAssessments, myLessonReads, loadDojo } from '../store.js';
 import { studyPlan } from '../plan.js';
 import { lessonsMeta } from './learn.js';
 import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS } from '../schedule.js';
 import { goalStatus } from '../goals.js';
 import { app, catalog, chapterIndex, firstName, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
+import { dojoFrom, homeDojo, bindHomeDojo } from './dojo.js';
 
 export function chaptersLabel(ids, idx) {
   const bySub = new Map();
@@ -45,16 +46,17 @@ export async function renderHome() {
   if (!body.dataset.ready) body.innerHTML = `<div class="loading" style="height:60vh"><div><div class="spin" style="margin:0 auto 12px"></div>Loading…</div></div>`;
   const viewing = !!app.viewAs;            // admin sees the student's Home, read-only
   const vid = viewerId();
-  let cat, prog, inprog, done, goals, asms, reads, lessons;
+  let cat, prog, inprog, done, goals, asms, reads, lessons, dj;
   try {
     if (!viewing) await abandonStale();
-    [cat, prog, inprog, done, goals, asms, reads, lessons] = await Promise.all([catalog(), viewing ? progressOf(vid) : loadProgress(), inProgressAttempt(vid), completedAttempts(vid, 40), myGoals(vid),
-      loadAssessments().catch(() => []), myLessonReads(vid), lessonsMeta().catch(() => ({}))]);
+    [cat, prog, inprog, done, goals, asms, reads, lessons, dj] = await Promise.all([catalog(), viewing ? progressOf(vid) : loadProgress(), inProgressAttempt(vid), completedAttempts(vid, 40), myGoals(vid),
+      loadAssessments().catch(() => []), myLessonReads(vid), lessonsMeta().catch(() => ({})), loadDojo(vid).catch(() => ({ beaten: {}, exams: [] }))]);
   } catch (e) {
     body.innerHTML = `<div class="panel sunk empty" style="margin-top:40px"><p>${esc(e.message)}</p><button class="btn block" style="margin-top:12px" data-nav="#/home">Try again ↻</button></div>`;
     return;
   }
   const idx = chapterIndex(cat);
+  const dd = dojoFrom(cat, prog, dj, viewing);
   const lv = levelInfo(prog?.xp_total || 0);
   const doneDates = new Set(done.map(a => jakartaDate(a.finished_at)));
   const streak = prog?.current_streak || 0;
@@ -131,7 +133,7 @@ export async function renderHome() {
         <div class="eyebrow">Streak</div>
         <div class="big num">${FLAME} ${streak}<small>${streak === 1 ? 'day' : 'days'}</small></div>
         ${weekStrip(doneDates)}
-        <div class="note num" style="margin-top:6px">Best ${prog?.best_streak || 0}</div>
+        <div class="note num" style="margin-top:6px">Best ${prog?.best_streak || 0}${prog?.freeze_needed && prog?.freeze_ready && streak ? ' · 🛡️ shield on today' : prog?.freeze_ready ? ' · 🛡️ ready' : ''}</div>
       </div>
       <div class="panel stat">
         <div class="eyebrow">Level ${lv.level} · ${lv.tier}</div>
@@ -140,6 +142,7 @@ export async function renderHome() {
         <div class="note num" style="margin-top:6px">${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
       </div>
     </div>
+    ${hi(homeDojo(dd), 1)}
     ${hi(comingUp, 2)}
     </aside>
     </div>
@@ -150,6 +153,7 @@ export async function renderHome() {
   </div>`;
   body.dataset.ready = '1';
   setMascot($('#m-home'), 'neutral');
+  bindHomeDojo(body, dd);
 
   $('#pwbtn').onclick = () => passwordSheet();
   if (wantPw) { const o = wantPw; wantPw = null; passwordSheet(o); }

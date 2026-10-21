@@ -1,6 +1,6 @@
 // Pick chapters (DESIGN §5.3, PRD FR-11..FR-13, FR-20, FR-25a, FR-27).
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast } from '../ui.js';
-import { startAttempt, inProgressAttempt, abandonAttempt, prefs } from '../store.js';
+import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress } from '../store.js';
 import { app, catalog } from '../state.js';
 import { show, navigate } from '../router.js';
 
@@ -98,6 +98,13 @@ export async function renderPick(arg) {
   show('pick');
   $('#chaplist').innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
   try { cat = await catalog(true); } catch (e) { $('#chaplist').innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
+  $('#capnote').hidden = true;
+  if (!app.viewAs && app.profile?.role !== 'admin') loadProgress().then(p => {
+    const capN = +cat.rules?.daily_cap || 90, n = p?.answers_today || 0;
+    if (n < capN) return;
+    const el = $('#capnote'); el.hidden = false;
+    el.innerHTML = `💤 You answered <b class="num">${n}</b> questions today and reached the XP cap. You can still practise (it trains your bosses), but no XP until tomorrow. Resting is training too!`;
+  }).catch(() => { /* note is optional */ });
   if (preset && preset.startsWith('sub:')) {          // from the schedule: subject tab, no chapters linked yet
     const sid = preset.slice(4);
     if (cat.subjects.some(s => s.id === sid)) { curSub = sid; sel.clear(); }
