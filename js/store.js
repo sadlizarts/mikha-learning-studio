@@ -115,7 +115,7 @@ export async function abandonStale() {
   try { await run(sb.rpc('abandon_stale_attempts')); } catch { /* non-fatal */ }
 }
 export async function inProgressAttempt(userId) {
-  const rows = await run(sb.from('attempts').select('id, chapter_ids, requested_length, total_questions, answered_count, started_at')
+  const rows = await run(sb.from('attempts').select('id, chapter_ids, requested_length, total_questions, answered_count, started_at, last_answered_at')
     .eq('user_id', userId).eq('status', 'in_progress').eq('is_preview', false).order('started_at', { ascending: false }).limit(1));
   return rows[0] || null;
 }
