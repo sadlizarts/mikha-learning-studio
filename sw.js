@@ -1,12 +1,12 @@
 // Service worker: caches the app shell only. Never caches *.supabase.co responses (CLAUDE.md rule 5).
-const VERSION = 'mls-v1.8.0';
+const VERSION = 'mls-v1.8.1';
 const KEEP = ['mls-lessons']; // per-user lesson pictures (cleared on sign-out by the app)
 const SHELL = [
   './', './index.html', './manifest.json',
   './css/fonts.css', './css/tokens.css', './css/app.css',
   './js/main.js', './js/router.js', './js/supabase.js', './js/store.js', './js/state.js', './js/ui.js', './js/auth.js',
   './js/features/home.js', './js/features/pick.js', './js/features/quiz.js', './js/features/result.js', './js/features/history.js', './js/features/progress.js', './js/goals.js', './js/lesson-md.js', './js/features/learn.js', './js/schedule.js', './js/plan.js', './js/features/schedule.js', './js/dojo.js', './js/features/dojo.js',
-  './js/features/admin/index.js', './js/features/admin/common.js', './js/features/admin/import.js', './js/features/admin/questions.js', './js/features/admin/review.js', './js/features/admin/student.js', './js/features/admin/subjects.js', './js/features/admin/goals.js', './js/features/admin/lessons.js', './js/features/admin/schedule.js', './js/features/admin/viewer.js',
+  './js/features/admin/index.js', './js/features/admin/common.js', './js/features/admin/import.js', './js/features/admin/questions.js', './js/features/admin/review.js', './js/features/admin/student.js', './js/features/admin/subjects.js', './js/features/admin/dojo.js', './js/features/admin/goals.js', './js/features/admin/lessons.js', './js/features/admin/schedule.js', './js/features/admin/viewer.js',
   './vendor/supabase.js',
   './fonts/lilita-one-latin-400-normal.woff2', './fonts/lilita-one-latin-ext-400-normal.woff2',
   './fonts/nunito-latin-500-normal.woff2', './fonts/nunito-latin-700-normal.woff2', './fonts/nunito-latin-800-normal.woff2', './fonts/nunito-latin-900-normal.woff2',
