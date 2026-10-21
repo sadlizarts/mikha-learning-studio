@@ -1,6 +1,7 @@
 // Dojo (v1.8.0, Sadli 21 Oct 2026): chapter bosses, dojo rank, technique cards, daily target.
 // Original world (no licensed names/characters): every chapter is guarded by a spirit; beat it by mastering the chapter.
 import { esc } from './ui.js';
+import { monsterSVG } from './monsters.js';
 
 export const RANKS = [
   { name: 'Initiate',    belt: 'White belt',  color: '#F4F1EA' },
@@ -78,34 +79,10 @@ export function rankInfo(rank, beatNow, R) {
 }
 
 /* ---------- pictures (original SVG, generated) ---------- */
+/** Boss portrait (v2.0.0): delegates to the subject monster families in monsters.js. state: new | fight | defeated | minion | elite | boss | sealed */
 export function bossSVG(ch, color, { state = 'fight', size = 96 } = {}) {
-  const r = rng(seedOf('art:' + ch.code));
-  const lobes = 5 + Math.floor(r() * 4), cx = 50, cy = 54, R0 = 30 + r() * 4;
-  const pts = [];
-  for (let i = 0; i <= 48; i++) {
-    const t = i / 48 * Math.PI * 2;
-    const rr = R0 + Math.sin(t * lobes + r() * 0.2) * 3.2 + (t > Math.PI * 0.15 && t < Math.PI * 0.85 ? 4 : 0);
-    pts.push([cx + Math.cos(t) * rr * 1.05, cy + Math.sin(t) * rr * 0.95]);
-  }
-  const body = 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(',')).join('L') + 'Z';
-  const horns = r() < 0.65 ? `<path d="M30 33 L${22 + r() * 6} ${8 + r() * 8} L40 27Z M70 33 L${72 + r() * 6} ${8 + r() * 8} L60 27Z" fill="var(--ink)"/>` : '';
-  const eyes = 1 + Math.floor(r() * 3);
-  const eyeY = 46 + r() * 4;
-  const xs = eyes === 1 ? [50] : eyes === 2 ? [40, 60] : [36, 50, 64];
-  const dead = state === 'defeated';
-  const eyeSvg = xs.map((x, i) => dead
-    ? `<path d="M${x - 4} ${eyeY - 4}l8 8M${x + 4} ${eyeY - 4}l-8 8" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>`
-    : `<ellipse cx="${x}" cy="${eyeY}" rx="${5.5 - (eyes === 3 && i === 1 ? 0 : 0.5)}" ry="6.5" fill="#fff" stroke="var(--ink)" stroke-width="2"/><circle cx="${x + (r() - 0.5) * 2}" cy="${eyeY + 1}" r="2.6" fill="var(--ink)"/>`).join('');
-  const teeth = Math.floor(3 + r() * 3);
-  let mouth = `<path d="M36 66 Q50 ${74 + r() * 6} 64 66" fill="var(--ink)" stroke="var(--ink)" stroke-width="2"/>`;
-  for (let i = 0; i < teeth; i++) { const x = 39 + i * (22 / teeth); mouth += `<path d="M${x.toFixed(1)} 67 l2.4 4 l2.4 -4Z" fill="#fff"/>`; }
-  if (dead) mouth = `<path d="M40 70 h20" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>`;
-  const wisps = [0, 1, 2].map(i => `<path class="wisp" d="M${30 + i * 20} 86 q${4 - i * 2} 6 0 10" stroke="${color}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>`).join('');
-  const seal = dead ? `<g transform="rotate(-18 50 52)"><rect x="40" y="18" width="20" height="64" rx="2" fill="#FFF6D6" stroke="var(--ink)" stroke-width="2"/><path d="M45 28h10M45 36h10M50 44v24M45 52h10M44 62l12 6" stroke="var(--ember)" stroke-width="2.4" stroke-linecap="round"/></g>` : '';
-  const fill = state === 'new' ? 'var(--paper-2)' : color;
-  return `<svg class="boss-svg ${esc(state)}" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">
-    ${wisps}${horns}<path d="${body}" fill="${fill}" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>
-    ${state === 'new' ? '<text x="50" y="62" text-anchor="middle" font-family="var(--display)" font-size="30" fill="var(--ink-3)">?</text>' : eyeSvg + mouth}${seal}</svg>`;
+  const phase = state === 'defeated' ? 'sealed' : state === 'fight' ? 'boss' : state;
+  return monsterSVG(ch, { phase, size });
 }
 
 export function cardSVG(ch, color, tier = 'bronze', { locked = false, size = 120 } = {}) {

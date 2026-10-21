@@ -2,7 +2,8 @@
 import { $, $$ } from './ui.js';
 
 const TABS = ['home', 'dojo', 'learn', 'progress', 'history'];
-const TAB_ALIAS = { hero: 'dojo' };   // sub-screens that keep their parent tab lit
+const TAB_ALIAS = { hero: 'dojo', bosses: 'dojo' };
+const NIGHT = ['dojo', 'hero', 'bosses'];   // Night Dojo screens (dark theme, v2.0.0)   // sub-screens that keep their parent tab lit
 const routes = {};
 let guard = () => true;
 let current = null;
@@ -19,6 +20,7 @@ export const currentRoute = () => current;
 export function show(screen) {
   document.documentElement.classList.toggle('wide', screen === 'admin');
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + screen));
+  document.documentElement.classList.toggle('nd-on', NIGHT.includes(screen));
   const tabName = TAB_ALIAS[screen] || screen;
   const tab = TABS.includes(tabName);
   $('#tabbar').hidden = !tab;
