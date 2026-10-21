@@ -2,12 +2,12 @@
 // Logic unchanged from v1.8 (rank, exam, Ki/XP cap, shield, bosses, cards); only presentation is new.
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast, jakartaDate, shortDay, fmtNum } from '../ui.js';
 import { loadProgress, progressOf, loadDojo, startAttempt, startRankExam, loadHero } from '../store.js';
-import { heroSVG } from '../hero/art.js';
+import { heroSVG, heroPic } from '../hero/art.js';
 import { heroContext, inventory, validEquip } from '../hero/items.js';
 import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 import { RANKS, rules, bossName, techName, bossState, bossSVG, cardSVG, beltSVG, cardTier, TIER_LABEL, rankInfo } from '../dojo.js';
-import { FAMILIES, familyOf, phaseOf, formName, PHASES, monsterSVG, gateSVG, familyEmblem } from '../monsters.js';
+import { FAMILIES, familyOf, phaseOf, formName, PHASES, monsterSVG, gateSVG, familyEmblem, familyPortrait } from '../monsters.js';
 
 
 const STATUS = {
@@ -199,7 +199,7 @@ export async function renderDojo() {
   body.innerHTML = `<div class="nd-stack">
     <div class="row between"><div><div class="nd-label">${viewing ? 'Dad\'s view · ' : ''}Mission control</div><div class="nd-h1">Dojo</div></div></div>
     <button class="nd-card dj-hero" data-nav="#/hero" style="--belt:${rk.color}" aria-label="Open hero profile">
-      <div class="art">${heroSVG({ stage: rk.rank, equipped: heq }, { w: 220, h: 330, view: '230 60 564 1400' })}</div>
+      <div class="art">${heroPic({ stage: rk.rank }, { w: 240, h: 330, fit: 'cover' })}</div>
       <div class="info">
         <span class="belt-chip" style="--belt:${rk.color}"><i></i>${esc(rk.belt)}</span>
         <div class="nd-h1" style="font-size:clamp(26px,5vw,36px)">${esc(rk.name)}</div>
@@ -215,7 +215,7 @@ export async function renderDojo() {
       <div class="targets">${targets.map(bossCard).join('')}</div></div>` : ''}
     <div><div class="nd-sec"><div class="nd-h2">Monster families</div><span class="nd-sub nd-num">${d.beatNow}/${bosses.length} sealed</span></div>
       <div class="fam-list">${fams.map(({ k, f, list }) => { const sealed = list.filter(b => b.phase === 'sealed').length; return `<button class="fam-row" data-nav="#/bosses/${k}" style="--fc:${f.c}">
-        ${familyEmblem(k, 42)}<div style="min-width:0"><b>${esc(f.name)}</b> <span class="nd-sub" style="font-size:12px">· ${esc(list[0].m.short)}</span><div class="nd-bar"><i style="--p:${Math.round(100 * sealed / list.length)}%;--bc:${f.c}"></i></div></div>
+        ${familyPortrait(k, 44)}<div style="min-width:0"><b>${esc(f.name)}</b> <span class="nd-sub" style="font-size:12px">· ${esc(list[0].m.short)}</span><div class="nd-bar"><i style="--p:${Math.round(100 * sealed / list.length)}%;--bc:${f.c}"></i></div></div>
         <span class="nd-sub nd-num">${sealed}/${list.length} ›</span></button>`; }).join('')}</div></div>
   </div>`;
   body.dataset.ready = '1';

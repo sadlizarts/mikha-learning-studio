@@ -2,7 +2,7 @@
 import { $, $$, esc } from '../ui.js';
 import { show } from '../router.js';
 import { dojoData, bossCard, gateCard, openBoss, bindExam } from './dojo.js';
-import { FAMILIES, familyEmblem } from '../monsters.js';
+import { FAMILIES, familyEmblem, familyPortrait } from '../monsters.js';
 
 const ORDER = { boss: 0, elite: 1, minion: 2, new: 3, sealed: 4 };
 let view = 'hunt';   // hunt | sealed | all
@@ -28,7 +28,7 @@ export async function renderBosses(famArg) {
       <button class="nd-chip plain ${fam === 'all' ? 'on' : ''}" data-nav="#/bosses">All families</button>
       ${fams.map(k => `<button class="nd-chip ${fam === k ? 'on' : ''}" style="--c:${FAMILIES[k].c}" data-nav="#/bosses/${k}">${familyEmblem(k, 30)}${esc(FAMILIES[k].name)}</button>`).join('')}
     </div>
-    ${f ? `<div class="nd-card fam-banner" style="--fc:${f.c}">${familyEmblem(fam, 56)}<div style="min-width:0"><div class="nd-label">${esc(list[0].m.short)} family</div><div class="nd-h2">${esc(f.name)}</div><p class="nd-sub">${esc(f.lore)}</p>
+    ${f ? `<div class="nd-card fam-banner" style="--fc:${f.c}">${familyPortrait(fam, 96)}<div style="min-width:0"><div class="nd-label">${esc(list[0].m.short)} family</div><div class="nd-h2">${esc(f.name)}</div><p class="nd-sub">${esc(f.lore)}</p>
       <p class="nd-sub" style="font-size:12px;margin-top:4px">Forms: ${f.forms.map(esc).join(' → ')}</p></div><div style="text-align:right"><div class="nd-h1 nd-num" style="font-size:30px">${sealed}/${list.length}</div><div class="nd-label">sealed</div></div></div>` : gateCard(d)}
     <div class="row between" style="flex-wrap:wrap;gap:10px">
       <div class="nd-tabs" style="flex:1 1 300px;max-width:440px">${[['hunt', `Hunting ${list.length - sealed}`], ['sealed', `Sealed ${sealed}`], ['all', 'All']].map(([k, l]) => `<button class="${view === k ? 'on' : ''}" data-v="${k}">${l}</button>`).join('')}</div>

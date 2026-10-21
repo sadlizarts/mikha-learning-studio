@@ -6,7 +6,7 @@ import { app, firstName } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
 import { dojoData } from './dojo.js';
 import { RANKS, beltSVG, cardTier } from '../dojo.js';
-import { heroSVG, itemArt, svgDoc } from '../hero/art.js';
+import { heroSVG, heroPic, STAGE_ART, itemArt, svgDoc } from '../hero/art.js';
 import { RARITY, SLOTS, AURAS, inventory, heroContext, validEquip, slotOpen, stats, itemView, BRANCH_TITLES } from '../hero/items.js';
 import { FAMILIES, familyEmblem } from '../monsters.js';
 
@@ -17,6 +17,11 @@ function lookFor(stage, equipped, assets) {
   const look = { stage, equipped, assets: {}, anchors: {} };
   const m = assets.find(a => a.kind === 'master');
   if (m?.url) { look.assets.body = m.url; look.assets.hairBack = 'none'; look.assets.hairFront = 'none'; look.anchors.body = m.anchor; }
+  else {   // painted concept art per stage (v2.1.0): one full-body painting replaces every vector layer; weapons are part of the painting
+    look.assets.body = STAGE_ART(stage);
+    for (const k of ['hairBack', 'hairFront', 'outfit', 'back', 'armor', 'accessory', 'weapon']) look.assets[k] = 'none';
+    return look;
+  }
   for (const a of assets.filter(x => x.kind === 'stage' && x.stage === stage && x.url)) {
     const k = a.slot === 'hair' ? 'hairFront' : a.slot; if (['outfit', 'back', 'hairFront'].includes(k)) { look.assets[k] = a.url; look.anchors[k] = a.anchor; }
   }
@@ -60,7 +65,7 @@ export async function renderHero() {
     <div class="hp-grid">
       <div class="hp-stage" style="--belt:${rk.color}">
         <div class="herostage" id="herostage" role="img" aria-label="${esc(name)}'s hero, ${esc(rk.name)} stage">
-          <div class="hs-static">${heroSVG({ stage, equipped }, { w: 300, h: 450 })}</div>
+          <div class="hs-static">${heroPic({ stage }, { w: 300, h: 450 })}</div>
         </div>
         <div class="hp-plate"><div><span class="belt-chip" style="--belt:${rk.color}"><i></i>${esc(rk.belt)} · Stage ${stage + 1}/8</span><div class="nm" style="margin-top:8px">${esc(name)}</div><div class="ttl">${esc(rk.name)}</div></div>
           <div class="hp-lv"><div><small>LV</small><b>${lv.level}</b></div></div></div>
@@ -185,8 +190,8 @@ function evolveHTML() {
   const rk = RANKS[stage], next = RANKS[stage + 1];
   return `<div class="nd-card">
     <div class="nd-sec" style="margin-top:0"><div class="nd-h2">Evolution</div><span class="nd-sub">Stage ${stage + 1} of 8</span></div>
-    ${next ? `<div class="evo2"><div class="pane">${heroSVG({ stage, equipped }, { w: 150, h: 225 })}<span class="nd-label">${esc(rk.name)}</span></div><div class="arrow">→</div>
-      <div class="pane next">${heroSVG({ stage: stage + 1, equipped }, { w: 150, h: 225 })}<span class="nd-label" style="color:var(--nd-gold)">${esc(next.name)}</span></div></div>
+    ${next ? `<div class="evo2"><div class="pane">${heroPic({ stage }, { w: 150, h: 225 })}<span class="nd-label">${esc(rk.name)}</span></div><div class="arrow">→</div>
+      <div class="pane next">${heroPic({ stage: stage + 1 }, { w: 150, h: 225 })}<span class="nd-label" style="color:var(--nd-gold)">${esc(next.name)}</span></div></div>
       <p class="nd-sub" style="margin-top:10px">${esc(next.belt)}: new outfit${stage + 1 >= 3 ? ', guards' : ''}${stage + 1 >= 4 ? ', haori' : ''}${stage + 1 >= 5 ? ', cape' : ''}${stage + 1 >= 6 ? ', armor' : ''}${stage + 1 === 7 ? ', crown of light' : ''}.
       ${d.rk.ready ? `The gate is open: pass with ${d.R.pass}% to evolve.` : `Seal ${d.rk.need - d.rk.have} more boss${d.rk.need - d.rk.have === 1 ? '' : 'es'}, then beat the Exam Gate Boss.`}</p>
       <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap"><button class="nd-btn small" id="evoprev">▶ Preview evolution</button>${!viewing && d.rk.ready && !d.triedToday ? '<button class="nd-btn small primary" data-nav="#/dojo">Challenge the gate →</button>' : ''}</div>`
