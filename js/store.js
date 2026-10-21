@@ -565,3 +565,34 @@ export async function loadAssessments({ all = false } = {}) {
 export async function myGoals(userId) {
   try { return await run(sb.from('goals').select('*').eq('student_id', userId).eq('is_active', true)); } catch { return []; }
 }
+
+/* ---------------- hero (v1.9.0) ---------------- */
+export async function loadHero(userId) {
+  const rows = await run(sb.from('hero_profile').select('equipped, seen_stage, seen_level').eq('user_id', userId).limit(1));
+  return rows[0] || { equipped: {}, seen_stage: null, seen_level: null };
+}
+export async function saveHero({ equipped = null, seenStage = null, seenLevel = null } = {}) {
+  return run(sb.rpc('hero_save', { p_equipped: equipped, p_seen_stage: seenStage, p_seen_level: seenLevel }));
+}
+/** Approved hero layers with short-lived signed URLs: { master, stage: {n: {url, anchor}}, item: {key: {url, anchor}} } */
+export async function heroAssets({ all = false } = {}) {
+  let q = sb.from('hero_assets').select('id, kind, slot, stage, item_key, storage_path, anchor, status, prompt, model, created_at, reviewed_at').eq('hero_key', 'main').order('created_at', { ascending: false }).limit(200);
+  if (!all) q = q.eq('status', 'approved');
+  const rows = await run(q);
+  if (!rows.length) return rows;
+  const { data } = await sb.storage.from('hero').createSignedUrls(rows.map(r => r.storage_path), 3600);
+  const byPath = Object.fromEntries((data || []).map(d => [d.path, d.signedUrl]));
+  return rows.map(r => ({ ...r, url: byPath[r.storage_path] || null }));
+}
+export async function heroReview(id, status, anchor = null) {
+  return run(sb.rpc('hero_review', { p_asset: id, p_status: status, p_anchor: anchor }));
+}
+export async function heroGenerate(body) {
+  const { data, error } = await sb.functions.invoke('hero-generate', { body });
+  if (error) {
+    let msg = error.message;
+    try { const j = await error.context?.json?.(); if (j?.error) msg = j.error; } catch { /* keep message */ }
+    throw new AppError('hero', msg);
+  }
+  return data;
+}

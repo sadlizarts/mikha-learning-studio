@@ -2,6 +2,7 @@
 import { $, $$ } from './ui.js';
 
 const TABS = ['home', 'dojo', 'learn', 'progress', 'history'];
+const TAB_ALIAS = { hero: 'dojo' };   // sub-screens that keep their parent tab lit
 const routes = {};
 let guard = () => true;
 let current = null;
@@ -18,10 +19,11 @@ export const currentRoute = () => current;
 export function show(screen) {
   document.documentElement.classList.toggle('wide', screen === 'admin');
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + screen));
-  const tab = TABS.includes(screen);
+  const tabName = TAB_ALIAS[screen] || screen;
+  const tab = TABS.includes(tabName);
   $('#tabbar').hidden = !tab;
   document.documentElement.classList.toggle('has-tabs', tab);
-  $$('.tab').forEach(t => { const on = t.dataset.tab === screen; t.classList.toggle('on', on); t.setAttribute('aria-current', on ? 'page' : 'false'); });
+  $$('.tab').forEach(t => { const on = t.dataset.tab === tabName; t.classList.toggle('on', on); t.setAttribute('aria-current', on ? 'page' : 'false'); });
   $('#toast').style.bottom = tab ? '' : 'calc(16px + env(safe-area-inset-bottom,0px))';
 }
 
