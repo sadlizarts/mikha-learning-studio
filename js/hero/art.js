@@ -173,6 +173,14 @@ const ITEMS_ART = {
 };
 export const itemArt = (key) => (ITEMS_ART[key] ? ITEMS_ART[key]() : '');
 
+/** Painted stage art (v2.1.0): Sadli's concept sheets, 8 belts mapped to the 4+4 paintings. Same rig (feet near y 1440). */
+export const STAGE_ART = (stage) => `hero/stage${Math.max(0, Math.min(7, stage))}.webp`;
+export const hasStageArt = () => true;
+/** Painted portrait as <img>; `fit` = 'contain' (full body) or 'cover' (banner crop). */
+export function heroPic({ stage = 0 } = {}, { w = 300, h = 450, fit = 'contain', cls = '' } = {}) {
+  return `<img class="heropic ${cls}" src="${STAGE_ART(stage)}" width="${w}" height="${h}" alt="" style="object-fit:${fit};object-position:50% 15%" decoding="async">`;
+}
+
 export const svgDoc = (inner, { w = W, h = H, view = `0 0 ${W} ${H}` } = {}) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${w}" height="${h}">${inner}</svg>`;
 
