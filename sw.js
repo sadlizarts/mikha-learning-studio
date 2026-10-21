@@ -1,5 +1,5 @@
 // Service worker: caches the app shell only. Never caches *.supabase.co responses (CLAUDE.md rule 5).
-const VERSION = 'mls-v2.0.0';
+const VERSION = 'mls-v2.1.0';
 const KEEP = ['mls-lessons']; // per-user lesson pictures (cleared on sign-out by the app)
 const SHELL = [
   './', './index.html', './manifest.json',
@@ -8,6 +8,7 @@ const SHELL = [
   './js/features/home.js', './js/features/pick.js', './js/features/quiz.js', './js/features/result.js', './js/features/history.js', './js/features/progress.js', './js/goals.js', './js/lesson-md.js', './js/features/learn.js', './js/schedule.js', './js/plan.js', './js/features/schedule.js', './js/dojo.js', './js/monsters.js', './js/features/dojo.js', './js/features/bosses.js', './js/hero/art.js', './js/hero/items.js', './js/hero/stage.js', './js/features/hero.js', './vendor/pixi.min.mjs',
   './js/features/admin/index.js', './js/features/admin/common.js', './js/features/admin/import.js', './js/features/admin/questions.js', './js/features/admin/review.js', './js/features/admin/student.js', './js/features/admin/subjects.js', './js/features/admin/dojo.js', './js/features/admin/hero.js', './js/features/admin/goals.js', './js/features/admin/lessons.js', './js/features/admin/schedule.js', './js/features/admin/viewer.js',
   './vendor/supabase.js',
+  './hero/stage0.webp', './hero/stage1.webp', './hero/stage2.webp', './hero/stage3.webp', './hero/stage4.webp', './hero/stage5.webp', './hero/stage6.webp', './hero/stage7.webp', './hero/mon-math-big.webp', './hero/mon-math-minion.webp', './hero/mon-math-elite.webp', './hero/mon-math-boss.webp', './hero/mon-sci-big.webp', './hero/mon-sci-minion.webp', './hero/mon-sci-elite.webp', './hero/mon-sci-boss.webp', './hero/mon-eng-big.webp', './hero/mon-eng-minion.webp', './hero/mon-eng-elite.webp', './hero/mon-eng-boss.webp', './hero/mon-ind-big.webp', './hero/mon-ind-minion.webp', './hero/mon-ind-elite.webp', './hero/mon-ind-boss.webp', './hero/mon-pan-big.webp', './hero/mon-pan-minion.webp', './hero/mon-pan-elite.webp', './hero/mon-pan-boss.webp', './hero/mon-aga-big.webp', './hero/mon-aga-minion.webp', './hero/mon-aga-elite.webp', './hero/mon-aga-boss.webp',
   './fonts/lilita-one-latin-400-normal.woff2', './fonts/lilita-one-latin-ext-400-normal.woff2',
   './fonts/nunito-latin-500-normal.woff2', './fonts/nunito-latin-700-normal.woff2', './fonts/nunito-latin-800-normal.woff2', './fonts/nunito-latin-900-normal.woff2',
   './fonts/nunito-latin-ext-500-normal.woff2', './fonts/nunito-latin-ext-700-normal.woff2', './fonts/nunito-latin-ext-800-normal.woff2', './fonts/nunito-latin-ext-900-normal.woff2',
