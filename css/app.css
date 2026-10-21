@@ -768,3 +768,17 @@ html.nd-on .sheet .btn.primary{background:linear-gradient(135deg,#FF6A3D,#FFB13D
   .nd .dj-hero{min-height:300px}.nd .dj-hero .art svg{max-height:340px}
 }
 @media (prefers-reduced-motion: reduce){.nd .lcard::before{animation:none!important}.nd .bcard,.nd .lcard{transition:none}}
+
+/* painted art (v2.1.0) */
+.heropic{display:block;max-width:100%;height:auto;filter:drop-shadow(0 10px 24px rgba(0,0,0,.55))}
+.nd .dj-hero .art .heropic{width:100%;height:100%;max-height:none;object-fit:cover;margin:0;border-radius:var(--nd-r) 0 0 var(--nd-r)}
+.nd .evo2 .pane.next .heropic{filter:brightness(0) drop-shadow(0 0 8px var(--nd-gold)) drop-shadow(0 0 2px #fff)}
+.mon-wrap{position:relative;display:inline-block;vertical-align:middle;flex:none}
+.mon-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.mon-wrap.mon-new img{filter:brightness(0) opacity(.55)!important}
+.mon-wrap.mon-sealed img{filter:saturate(.3) brightness(.8)!important}
+.mon-wrap .mon-q{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:2.2em;color:#CFC7EA;opacity:.8}
+.mon-wrap .seal-ov{position:absolute;inset:0;width:100%;height:100%}
+.nd .bcard .port .mon-wrap{width:118px;height:118px}
+.fam-pic{border-radius:12px;object-fit:cover;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.hs-rig .hs-base.heropic{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:none}
