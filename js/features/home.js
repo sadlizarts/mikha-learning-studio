@@ -89,6 +89,9 @@ export async function renderHome() {
       </div>`).join('')}
     </div>` : '';
 
+  // Dad's view: a practice untouched for stale_hours (24) counts as left behind (Sadli, 21 Oct 2026); it closes when Mikha next opens the app.
+  const staleMs = (+(cat.rules || {}).stale_hours || 24) * 3600000;
+  if (viewing && inprog && Date.now() - new Date(inprog.last_answered_at || inprog.started_at).getTime() > staleMs) inprog = null;
   const resume = viewing ? (inprog ? `<div class="panel sunk"><div class="eyebrow">Practice in progress</div><div style="font-weight:900;color:var(--ink)">${esc(chaptersLabel(inprog.chapter_ids, idx))} · <span class="num">${inprog.answered_count}/${inprog.total_questions}</span> answered</div></div>` : '') : inprog ? `
     <div class="panel cta resume">
       <div class="lines"></div>
