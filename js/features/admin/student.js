@@ -1,6 +1,6 @@
 // Admin → Student dashboard (FR-60, FR-62).
 import { $, $$, esc, fmtNum, fmtDur, levelInfo, jakartaDate, shortDay, scoreCls, trendSVG } from '../../ui.js';
-import { admin } from '../../store.js';
+import { admin, myRetreats } from '../../store.js';
 import { catalog, chapterIndex } from '../../state.js';
 import { chapterLabel, qTags, openEditor } from './common.js';
 import { chaptersLabel } from '../home.js';
@@ -11,7 +11,7 @@ export async function renderStudent(body) {
   const students = await admin.students();
   if (!students.length) { body.innerHTML = '<div class="panel sunk empty">No student account yet.</div>'; return; }
   const st = students[0];
-  const [att, prog, cstats, missed, lreads] = await Promise.all([admin.studentAttempts(st.id, 80), admin.studentProgress(st.id), admin.studentChapterStats(st.id), admin.mostMissed({ limit: 10 }), admin.lessonReads(st.id).catch(() => [])]);
+  const [att, prog, cstats, missed, lreads, rts] = await Promise.all([admin.studentAttempts(st.id, 80), admin.studentProgress(st.id), admin.studentChapterStats(st.id), admin.mostMissed({ limit: 10 }), admin.lessonReads(st.id).catch(() => []), myRetreats(st.id).catch(() => null)]);
   const R = cat.rules || {}; const NEEDS = +R.needs_work_threshold || 70, MIN = +R.min_answered || 15;
   const done = att.filter(a => a.status === 'completed');
   // Abandoned sessions with only a few answers are noise in the list (answers still count in the stats).
@@ -37,6 +37,9 @@ export async function renderStudent(body) {
       <div><div class="v num">${streak}</div><div class="l">Streak (best ${prog.best_streak || 0})</div></div>
       <div><div class="v num">L${lv.level}</div><div class="l">${fmtNum(prog.xp_total)} XP</div></div>
     </div>
+    <div class="panel"><div class="row between"><div class="eyebrow">Retreats · last 14 days</div><span class="note num">Today: ${rts?.today ?? 0}</span></div>
+      ${rts?.recent?.length ? `<table class="tbl" style="margin-top:6px"><thead><tr><th>Day</th><th class="r">Retreats</th><th class="r">XP lost</th></tr></thead><tbody>${rts.recent.map(r => `<tr><td class="num">${esc(shortDay(r.day))}</td><td class="r num">${r.n}</td><td class="r num">−${fmtNum(r.xp)}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No Retreats in the last 14 days.</p>'}
+      <p class="note" style="margin-top:6px">Retreat = leaving a practice with answers (Start fresh, or left for 24 h). Cost per day: 25, 50, 100, 200, then 400 XP. Angry monsters: ${rts?.angry?.length || 0}.</p></div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Score trend (last ${trend.length})</div>${trendSVG(trend, NEEDS)}</div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Chapters (last 30 answers)</div>
       ${chapRows.length ? `<table class="tbl"><thead><tr><th>Chapter</th><th class="r">Acc.</th><th class="r">Hints</th><th class="r">Ans.</th></tr></thead><tbody>${chapRows.map(c => `<tr>
