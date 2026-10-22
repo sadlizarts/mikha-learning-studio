@@ -59,6 +59,8 @@
     <div class="scroll no-tab" style="padding-bottom:190px">
       <div class="stack">
         <div class="panel sunk note capnote" id="capnote" hidden></div>
+        <div class="modebar" id="modebar" role="radiogroup" aria-label="Battle mode"></div>
+        <div class="nd-card revinfo" id="revinfo" hidden></div>
         <div class="subtabs" id="subtabs" role="tablist" aria-label="Subjects"></div>
         <div id="benchpick"></div>
         <div class="stack lgrid" id="chaplist" style="gap:10px"></div>
@@ -68,7 +70,7 @@
       <div class="panel" style="padding:12px">
         <div class="warnline" id="pickwarn" hidden></div>
         <div class="row between" style="margin-bottom:10px">
-          <div class="grow"><div class="eyebrow">Session length</div><div class="note num" id="pickmeta">0 chapters · 0 questions available</div></div>
+          <div class="grow"><div class="eyebrow" id="picklab">Session length</div><div class="note num" id="pickmeta">0 chapters · 0 questions available</div></div>
           <div class="lenbar" role="radiogroup" aria-label="Session length"><button class="len on" data-len="30" role="radio" aria-checked="true">30</button><button class="len" data-len="50" role="radio" aria-checked="false">50</button></div>
         </div>
         <button class="btn primary lg block" id="startbtn" disabled>Pick at least one chapter</button>
@@ -134,6 +136,7 @@
   <!-- LEARN -->
   <section class="screen nd" id="s-dojo" aria-label="Dojo"><div class="scroll" id="dojo-body"></div></section>
   <section class="screen nd" id="s-bosses" aria-label="Boss hunt"><div class="scroll" id="bosses-body"></div></section>
+  <section class="screen nd" id="s-dex" aria-label="Monster Dex"><div class="scroll" id="dex-body"></div></section>
   <section class="screen nd" id="s-hero" aria-label="Hero"><div class="scroll" id="hero-body"></div></section>
 
   <section class="screen nd" id="s-learn" aria-label="Learn">
