@@ -6,6 +6,8 @@ import { $, $$, esc, setMascot, subjectMeta, shortCode, toast, reducedMotion } f
 import { lessonIndex, myLessonReads, loadLesson, lessonImages, completeLesson, loadPage, markPage, pageForAnchor } from '../store.js';
 import { parseLesson, renderSections, inline } from '../lesson-md.js';
 import { app, catalog, chapterIndex, viewerId } from '../state.js';
+import { monsterSVG, phaseOf } from '../monsters.js';
+import { bossState, rules } from '../dojo.js';
 import { show, navigate } from '../router.js';
 
 let learnSub = null;
@@ -31,6 +33,7 @@ export async function renderLearn() {
   try { [cat, lidx, reads] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(viewerId())]); }
   catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}<button class="btn block" style="margin-top:12px" data-nav="#/learn">Try again ↻</button></div>`; return; }
   const R = cat.rules || {};
+  const DR = rules(cat), monPhase = (c) => { const st = cat.statBy[c.chapter_id]; return st ? phaseOf(bossState(st, false, DR), DR) : 'new'; };
   if (!learnSub || !cat.subjects.some(s => s.id === learnSub)) {
     // start on the first subject that has a lesson
     const withLesson = cat.chapters.find(c => lidx[c.chapter_id]);
@@ -44,7 +47,7 @@ export async function renderLearn() {
   const s = cat.subjects.find(x => x.id === learnSub); const m = subjectMeta(s);
   const rows = cat.chapters.filter(c => c.subject_id === learnSub).map(c => {
     const L = lidx[c.chapter_id], r = reads[c.chapter_id], st = cat.statBy[c.chapter_id];
-    if (!L) return `<div class="lrow soon" style="--c:${m.color}" aria-disabled="true"><div class="code">${esc(shortCode(c.code))}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">Coming soon</div></div></div>`;
+    if (!L) return `<div class="lrow soon" style="--c:${m.color}" aria-disabled="true"><div class="code mcode">${monsterSVG(c, { phase: 'new', size: 50 })}<b class="cbadge">${esc(shortCode(c.code))}</b></div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">Coming soon</div></div></div>`;
     const bits = [];
     if (r?.first_completed_at) bits.push('<span class="read">✓ Read</span>');
     if (isNeedsWork(st, R)) bits.push('<span class="nw">Needs work</span>');
@@ -53,7 +56,7 @@ export async function renderLearn() {
     if (pages.length) bits.push(`<span class="num">${(r?.pages_read || []).filter(x => pages.some(p => p.slug === x)).length}/${pages.length} pages</span>`);
     bits.push(`≈ ${mins || 6} min`);
     if (r?.quick_check_total) bits.push(`<span class="num">Quick check ${r.quick_check_score}/${r.quick_check_total}</span>`);
-    return `<button class="lrow" style="--c:${m.color}" data-nav="#/lesson/${c.chapter_id}"><div class="code">${esc(shortCode(c.code))}</div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${bits.join(' · ')}</div></div><span aria-hidden="true" style="color:var(--ink-3);font-weight:900">›</span></button>`;
+    return `<button class="lrow" style="--c:${m.color}" data-nav="#/lesson/${c.chapter_id}"><div class="code mcode">${monsterSVG(c, { phase: monPhase(c), size: 50 })}<b class="cbadge">${esc(shortCode(c.code))}</b></div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${bits.join(' · ')}</div></div><span aria-hidden="true" style="color:var(--ink-3);font-weight:900">›</span></button>`;
   }).join('');
   const total = Object.keys(lidx).length;
   body.innerHTML = `<div class="stack">

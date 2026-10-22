@@ -2,6 +2,8 @@
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast } from '../ui.js';
 import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress } from '../store.js';
 import { app, catalog } from '../state.js';
+import { monsterSVG, phaseOf } from '../monsters.js';
+import { bossState, rules } from '../dojo.js';
 import { show, navigate } from '../router.js';
 
 let cat = null;
@@ -34,7 +36,7 @@ function renderChapters() {
     const acc = st && st.answered > 0 ? st.accuracy_recent : null;
     const meta = off ? 'No questions yet' : `${n} questions${acc === null ? ' · <span class="new">NEW</span>' : ''}`;
     return `<button class="chap ${on ? 'on' : ''}" style="--c:${m.color}" data-ch="${c.chapter_id}" ${off ? 'disabled' : ''} aria-pressed="${on}">
-      <div class="code">${esc(shortCode(c.code))}</div>
+      <div class="code mcode">${monsterSVG(c, { phase: st ? phaseOf(bossState(st, false, rules(cat)), rules(cat)) : 'new', size: 50 })}<b class="cbadge">${esc(shortCode(c.code))}</b></div>
       <div class="grow"><div class="name">${esc(c.name)}</div><div class="meta num">${meta}</div></div>
       ${acc !== null ? `<div class="acc num ${acc < (+cat.rules?.needs_work_threshold || 70) ? 'bad' : 'ok'}" title="Last 30 answers">${acc}%</div>` : ''}
       <div class="box" aria-hidden="true"></div></button>`;

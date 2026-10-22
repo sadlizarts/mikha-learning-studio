@@ -1,5 +1,5 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
-import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast } from '../ui.js';
+import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast, shortCode } from '../ui.js';
 import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, changePassword, abandonAttempt, myGoals, loadAssessments, myLessonReads, loadDojo } from '../store.js';
 import { studyPlan } from '../plan.js';
 import { lessonsMeta } from './learn.js';
@@ -7,7 +7,10 @@ import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS } from 
 import { goalStatus } from '../goals.js';
 import { app, catalog, chapterIndex, firstName, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
-import { dojoFrom, homeDojo, bindHomeDojo } from './dojo.js';
+import { dojoFrom, bindHomeDojo } from './dojo.js';
+import { STAGE_ART } from '../hero/art.js';
+import { FAMILIES, familyPortrait, monsterSVG } from '../monsters.js';
+
 
 export function chaptersLabel(ids, idx) {
   const bySub = new Map();
@@ -113,46 +116,74 @@ export async function renderHome() {
     </div>`;
 
   const hi = (html, n) => html ? `<div class="hitem" style="order:${n}">${html}</div>` : '';
-  body.innerHTML = `<div class="stack">
-    <div class="row between greet">
-      <div><div class="eyebrow">${esc(prettyDay())}${viewing ? ' · Dad\'s view' : ''}</div><h1>${viewing ? `${esc(app.viewAs.name.split(' ')[0])}'s studio` : `Hey ${esc(firstName())}!`}</h1></div>
-      <div class="mascot" id="m-home"></div>
+  // ---- v2.3 Night Dojo home ----
+  const { rk, R, bosses } = dd;
+  const nAns = prog?.answers_today || 0, kiPct = Math.min(100, Math.round(100 * nAns / R.target));
+  const pr = { revived: 0, cracked: 1, fight: 2 };
+  const next = bosses.filter(b => b.st.status in pr).sort((a, b) => pr[a.st.status] - pr[b.st.status] || a.st.hp - b.st.hp)[0]
+    || bosses.find(b => b.phase !== 'sealed' && b.phase !== 'new');
+  const say = viewing ? `Watching ${esc(app.viewAs.name.split(' ')[0])}'s progress.`
+    : inprog ? 'Let\'s finish the practice we started!'
+    : next?.st.status === 'revived' ? `${esc(next.name)} broke its seal! Let\'s seal it again.`
+    : nAns >= R.cap ? 'XP cap reached. Great work, rest now!'
+    : nAns >= R.target ? 'Mission done! Every answer now is bonus XP.'
+    : streak > 1 ? `${streak} days in a row! Keep the streak alive.`
+    : 'Ready to train? Pick a monster to hunt.';
+  const greet = `<div class="hm-greet">
+      <div class="hm-ava" style="--belt:${rk.color};background-image:url(${STAGE_ART(rk.rank)})" aria-hidden="true"></div>
+      <div class="grow"><div class="nd-label">${esc(prettyDay())} · ${esc(rk.belt)}${viewing ? ' · Dad\'s view' : ''}</div>
+        <div class="nd-h1">${viewing ? `${esc(app.viewAs.name.split(' ')[0])}'s studio` : `Hey, ${esc(firstName())}!`}</div></div>
     </div>
+    <div class="hm-bubble">${say}</div>`;
+  const missionCard = `<div class="nd-card hm-mission">
+      <div class="row between"><div class="nd-label">Today's mission</div><span class="nd-label" style="color:var(--nd-gold)">Level ${lv.level} · ${esc(lv.tier)}</span></div>
+      <div class="row" style="gap:14px;margin-top:10px;align-items:center">
+        <div class="hm-ring" style="--p:${kiPct}" role="progressbar" aria-valuemin="0" aria-valuemax="${R.target}" aria-valuenow="${Math.min(nAns, R.target)}" aria-label="Answers today"><b class="num">${nAns}</b></div>
+        <div class="grow"><div class="nd-h2" style="font-size:18px">${nAns >= R.cap ? 'XP cap reached' : nAns >= R.target ? 'Mission done ✓' : `${R.target - nAns} answers to go`}</div>
+          <div class="nd-sub num">Target ${R.target} · ${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
+          <div class="nd-bar" style="margin-top:8px"><i style="--p:${lv.pct}%"></i></div></div>
+      </div>
+      <div class="row between" style="margin-top:12px;align-items:flex-end">${weekStrip(doneDates)}
+        <div class="hm-streak"><b class="num">${streak}</b><span>day streak${prog?.freeze_ready ? ' · 🛡️' : ''}</span></div></div>
+    </div>`;
+  const bossCard = next ? `<div class="nd-card hm-boss nextboss" data-boss="${next.ch.chapter_id}" style="--fc:${FAMILIES[next.fam].c}">
+      <div class="art">${monsterSVG(next.ch, { phase: next.phase, size: 128 })}</div>
+      <div class="grow" style="min-width:0"><div class="nd-label" style="color:${next.st.status === 'revived' ? '#FF8A9A' : 'var(--nd-dim)'}">${next.st.status === 'revived' ? '● Came back' : next.st.status === 'cracked' ? '● Seal cracking' : 'Next target'}</div>
+        <div class="nd-h2">${esc(next.name)}</div><div class="nd-sub">${esc(next.title)} · ${esc(next.m.short)} ${esc(shortCode(next.ch.code))}</div>
+        <div class="hp" style="margin:8px 0 10px" aria-label="HP ${next.st.hp}%"><i style="--p:${next.st.hp}%"></i></div>
+        ${viewing ? `<span class="nd-sub num">HP ${next.st.hp}%</span>` : '<button class="nd-btn primary small" data-fight>Fight 30 →</button>'}</div>
+    </div>` : '';
+  const examOpen = rk.ready && !viewing && !dd.triedToday ? `<button class="nd-card hm-exam" data-nav="#/dojo"><span class="nd-label" style="color:var(--nd-gold)">Exam gate open</span><b>Rank exam for ${esc(rk.next.name)} →</b></button>` : '';
+  const fams = Object.keys(FAMILIES).map(k => ({ k, f: FAMILIES[k], list: bosses.filter(b => b.fam === k) })).filter(x => x.list.length);
+  const worlds = fams.length ? `<div><div class="nd-sec"><div class="nd-h2">Your worlds</div><button class="nd-link" data-nav="#/bosses">${dd.beatNow}/${bosses.length} sealed ›</button></div>
+      <div class="hm-worlds">${fams.map(({ k, f, list }) => { const sealed = list.filter(b => b.phase === 'sealed').length; return `<button class="hm-world" data-nav="#/bosses/${k}" style="--c:${f.c}">
+        ${familyPortrait(k, 76)}<b>${esc(list[0].m.short)}</b><small class="num">${sealed}/${list.length} sealed</small><div class="nd-bar"><i style="--p:${Math.max(4, Math.round(100 * sealed / list.length))}%;--bc:${f.c}"></i></div></button>`; }).join('')}</div></div>` : '';
+  const startCta = viewing || inprog ? '' : `<div class="nd-card hm-start"><span class="hm-kanji" aria-hidden="true">修</span><div class="nd-label">Free training</div><div class="nd-h2" style="margin:2px 0 10px">Pick your own chapters</div><button class="nd-btn primary" data-nav="#/pick">Start a practice →</button></div>`;
+  const resumeNd = resume.replace('panel cta resume', 'nd-card emph hm-resume');
+  const ctaNd = viewing ? cta : '';
+
+  body.innerHTML = `<div class="nd-stack hm">
+    ${greet}
     <div class="hgrid">
     <div class="hmain">
-    ${hi(resume, 5)}${hi(cta, 6)}${hi(planCard, 3)}${hi(mission, 4)}
-    <div class="hitem" style="order:7">
-      <div class="row between" style="margin-bottom:8px"><h3 style="font-size:20px">Recent battles</h3>${done.length ? '<button class="btn ghost small" data-nav="#/history">All</button>' : ''}</div>
+    ${hi(resumeNd, 1)}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
+    <div class="hitem" style="order:10">
+      <div class="nd-sec"><div class="nd-h2">Recent battles</div>${done.length ? '<button class="nd-link" data-nav="#/history">All ›</button>' : ''}</div>
       <div class="recent">${done.length ? done.slice(0, 3).map(a => recRow(a, idx)).join('') :
         '<div class="panel sunk empty" style="font-size:15px">No battles yet. Your first practice shows up here.</div>'}</div>
     </div>
     </div>
     <aside class="hside">
-    <div class="statrow hitem" style="order:1">
-      <div class="panel stat">
-        <div class="eyebrow">Streak</div>
-        <div class="big num">${FLAME} ${streak}<small>${streak === 1 ? 'day' : 'days'}</small></div>
-        ${weekStrip(doneDates)}
-        <div class="note num" style="margin-top:6px">Best ${prog?.best_streak || 0}${prog?.freeze_needed && prog?.freeze_ready && streak ? ' · 🛡️ shield on today' : prog?.freeze_ready ? ' · 🛡️ ready' : ''}</div>
-      </div>
-      <div class="panel stat">
-        <div class="eyebrow">Level ${lv.level} · ${lv.tier}</div>
-        <div class="big num">${fmtNum(prog?.xp_total || 0)}<small>XP</small></div>
-        <div class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${lv.pct}" aria-label="Progress to next level"><i style="--p:${lv.pct}%"></i></div>
-        <div class="note num" style="margin-top:6px">${fmtNum(lv.toNext)} XP to Level ${lv.level + 1}</div>
-      </div>
-    </div>
-    ${hi(homeDojo(dd), 1)}
-    ${hi(comingUp, 2)}
+    ${hi(missionCard, 0)}
+    ${hi(comingUp, 5)}
     </aside>
     </div>
-    <div class="row between" style="margin-top:6px">
-      <span class="note">Signed in as ${esc(app.profile?.display_name || '')}${app.profile?.role === 'admin' ? ' · admin' : ''}</span>
+    <div class="row between" style="margin-top:6px;flex-wrap:wrap;gap:8px">
+      <span class="nd-sub" style="font-size:12px">Signed in as ${esc(app.profile?.display_name || '')}${app.profile?.role === 'admin' ? ' · admin' : ''}</span>
       <span class="row" style="gap:8px">${app.profile?.role === 'admin' ? '<button class="btn ghost small" data-nav="#/admin/import">Admin</button>' : ''}<button class="btn ghost small" id="pwbtn">Password</button><button class="btn ghost small" id="signout">Sign out</button></span>
     </div>
   </div>`;
   body.dataset.ready = '1';
-  setMascot($('#m-home'), 'neutral');
   bindHomeDojo(body, dd);
 
   $('#pwbtn').onclick = () => passwordSheet();
