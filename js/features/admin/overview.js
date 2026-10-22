@@ -7,6 +7,7 @@ import { app, viewerId } from '../../state.js';
 import { dojoData } from '../dojo.js';
 import { RANKS } from '../../dojo.js';
 import { daysUntil } from '../../schedule.js';
+import { loadReports, benchmarks, reportPlot, reportSummary, termName, statusOf, GOAL } from '../../report.js';
 
 export const SUB_COLOR = { math: '#3987e5', eng: '#d95926', sci: '#199e70', pan: '#c98500', ind: '#d55181', aga: '#9085e9' };
 const ST = { good: '#0ca30c', warn: '#fab219', serious: '#ec835a', crit: '#d03b3b' };
@@ -17,8 +18,9 @@ export async function overviewData() {
   const vid = viewerId();
   const [d, done, act, rt, asms, reads] = await Promise.all([dojoData(true), completedAttempts(vid, 12), admin.dailyActivity(vid, 14).catch(() => []),
     myRetreats(vid).catch(() => null), loadAssessments().catch(() => []), myLessonReads(vid).catch(() => ({}))]);
+  const reps = await loadReports(true).catch(() => []);
   const R = d.cat.rules || {};
-  return { d, done, act, rt, asms, reads, NEEDS: +R.needs_work_threshold || 70, MIN: +R.min_answered || 15, WIN: d.R.win || 80, TARGET: d.R.target || 30 };
+  return { d, done, act, rt, asms, reads, reps, bms: benchmarks(reps), NEEDS: +R.needs_work_threshold || 70, MIN: +R.min_answered || 15, WIN: d.R.win || 80, TARGET: d.R.target || 30 };
 }
 
 /** Up to 3 things Dad should look at, most urgent first (Bahasa Indonesia). */
@@ -34,6 +36,14 @@ export function attentionItems(o) {
     const n = daysUntil(a.date_start, today);
     out.push({ lvl: 'warn', ic: '⏳', t: `Asesmen ${esc(a.subject_name)} ${n <= 0 ? 'minggu ini' : n === 1 ? 'besok' : `${n} hari lagi`}`, s: ids.length ? `Siap ${ready} dari ${ids.length} bab (≥${WIN}%)` : 'Bab untuk asesmen ini belum diatur', go: [ids.length ? 'Jadwal' : 'Atur bab', '#/admin/schedule'] });
   }
+  // v2.9 report card: app subjects that are close to (or under) the 90 line, with how practice is going there
+  const tight = (o.bms || []).filter(b => b.subject_id && statusOf(b) !== 'ok');
+  if (tight.length) {
+    const pr = subjectPractice(d);
+    const below = tight.filter(b => statusOf(b) === 'below');
+    out.push({ lvl: below.length ? 'crit' : 'warn', ic: '📋', t: `Rapor: ${tight.map(b => `${esc(shortSub(b, d))} ${Math.round(b.score)}`).join(', ')}${below.length ? ' (di bawah 90)' : ' (tipis, ≤ +2)'}`,
+      s: `Latihan: ${tight.map(b => `${esc(shortSub(b, d))} ${pr[b.subject_id] === null || pr[b.subject_id] === undefined ? 'belum ada' : pr[b.subject_id] + '%'}`).join(' · ')}`, go: ['Rapor', '#/admin/overview'] });
+  }
   const idx = Object.fromEntries(d.bosses.map(b => [b.ch.chapter_id, b]));
   const weak = Object.values(d.cat.statBy).filter(s => s.answered >= MIN && s.accuracy_recent < NEEDS && idx[s.chapter_id]).sort((a, b) => a.accuracy_recent - b.accuracy_recent)[0];
   if (weak) { const b = idx[weak.chapter_id]; out.push({ lvl: 'crit', ic: '↓', t: `${esc(b.m.short)} ${esc(shortCode(b.ch.code))} masih ${weak.accuracy_recent}%`, s: `Di bawah ${NEEDS}% · materi ${reads[weak.chapter_id]?.first_completed_at ? 'sudah' : 'belum'} dibaca`, go: ['Buat target', '#/admin/goals'] }); }
@@ -41,6 +51,32 @@ export function attentionItems(o) {
   if (!todayN && Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }).format(new Date())) >= 15) out.push({ lvl: 'warn', ic: '…', t: 'Belum latihan hari ini', s: d.prog?.current_streak ? `Streak ${d.prog.current_streak} hari bisa putus` : 'Belum ada jawaban hari ini' });
   if (d.rk.ready && !d.triedToday) out.push({ lvl: 'good', ic: '🥋', t: `Ujian sabuk ${esc(d.rk.next.belt)} sudah terbuka`, s: `${d.rk.have}/${d.rk.need} boss tersegel · lulus ${d.R.pass || 85}%`, go: ['Dojo', '#/admin/dojo'] });
   return out.slice(0, 3);
+}
+
+/** Answer-weighted last-30 accuracy per app subject (null = not practised yet). */
+export function subjectPractice(d) {
+  const out = {};
+  for (const s of d.cat.subjects) {
+    const st = d.bosses.filter(b => b.ch.subject_id === s.id).map(b => d.cat.statBy[b.ch.chapter_id]).filter(x => x && x.answered > 0);
+    const w = st.reduce((t, x) => t + Math.min(30, x.answered), 0);
+    out[s.id] = w ? Math.round(st.reduce((t, x) => t + x.accuracy_recent * Math.min(30, x.answered), 0) / w) : null;
+  }
+  return out;
+}
+const shortSub = (b, d) => { const s = d.cat.subjects.find(x => x.id === b.subject_id); return s ? subjectMeta(s).short : b.subject_label; };
+
+/** Dad's report-card panel: all subjects, practice next to the app ones, teacher comments folded. */
+function raporCard(o) {
+  const { bms, reps, d } = o;
+  if (!bms?.length) return `<div class="ad-card" id="ad-rapor"><div class="ad-ttl">Rapor sekolah</div><p class="ad-note">Belum ada rapor. Kirim foto rapor ke Claude untuk dimasukkan.</p></div>`;
+  const S = reportSummary(bms), r = reps[0], ab = r.absence || {};
+  return `<div class="ad-card" id="ad-rapor"><div class="row between"><div class="ad-ttl">Rapor · ${esc(termName(r, 'id'))}</div><span class="ad-lab">${esc(HARI.format(new Date(r.report_date)))}</span></div>
+    <div class="ad-kpis three" style="margin:8px 0 4px">
+      <div class="ad-kpi"><div class="v num">${String(S.all).replace('.', ',')}</div><div class="l">Rata-rata ${S.n} mapel</div></div>
+      <div class="ad-kpi"><div class="v num">${String(S.app).replace('.', ',')}</div><div class="l">Rata-rata mapel app</div></div>
+      <div class="ad-kpi"><div class="v num" style="color:${S.above === S.n ? ST.good : ST.crit}">${S.above}/${S.n}</div><div class="l">Mapel ≥ ${GOAL}</div></div></div>
+    ${reportPlot(bms, { lang: 'id', practice: subjectPractice(d), comments: true })}
+    <p class="ad-note">Target tiap mapel = nilai rapor terakhir + 1 (minimal ${GOAL}). "Latihan" = akurasi 30 jawaban terakhir di app, bukan prediksi nilai rapor. Absen: sakit ${ab.sick ?? 0} hari, izin ${ab.permission ?? 0}, tanpa izin ${ab.without_permission ?? 0}.</p></div>`;
 }
 
 export function attentionCard(items, { title = 'Perlu perhatian' } = {}) {
@@ -135,6 +171,6 @@ export async function renderOverview(body) {
     <div class="ad-gl"><span>Boss tersegel</span><span class="num">${d.beatNow} / ${d.bosses.length}</span></div><div class="ad-bar"><i style="width:${Math.round(100 * d.beatNow / Math.max(1, d.bosses.length))}%;background:${ST.good}"></i></div>
     <div class="ad-gl"><span>Level ${lv.level} → ${lv.level + 1}</span><span class="num">${fmtNum(lv.toNext)} XP lagi</span></div><div class="ad-bar"><i style="width:${lv.pct}%;background:#3987e5"></i></div></div>`;
 
-  body.innerHTML = `<div class="ad-stack">${attentionCard(attentionItems(o))}${kpis}${activity}${scoreCard}${mastery}${map}${exams}${game}
+  body.innerHTML = `<div class="ad-stack">${attentionCard(attentionItems(o))}${kpis}${raporCard(o)}${activity}${scoreCard}${mastery}${map}${exams}${game}
     <p class="ad-note" style="text-align:center">Data ${esc(app.viewAs.name)} · ${esc(HARI.format(new Date()))} · sentuh grafik untuk detail</p></div>`;
 }
