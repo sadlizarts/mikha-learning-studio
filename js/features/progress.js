@@ -8,6 +8,7 @@ import { lessonsMeta } from './learn.js';
 import { dojoData } from './dojo.js';
 import { heroPic } from '../hero/art.js';
 import { FAMILIES, monsterSVG } from '../monsters.js';
+import { loadReports, benchmarks, reportPlot, reportSummary, termName, GOAL } from '../report.js';
 
 /** Glowing area chart of the last scores (oldest → newest) with the seal line. */
 function trendChart(scores, seal) {
@@ -29,21 +30,33 @@ function trendChart(scores, seal) {
   </svg>`;
 }
 
+/** v2.9 school report card: every subject vs the 90 line and the next goal (latest report = benchmark). */
+function reportCard(reps) {
+  const bms = benchmarks(reps); if (!bms.length) return '';
+  const S = reportSummary(bms), r = reps[0], all = S.above === S.n;
+  return `<div class="nd-card pg-report"><div class="row between"><div><div class="nd-label">School report · ${esc(termName(r))}</div><div class="nd-h2" style="font-size:18px">Mission: every subject ${GOAL}+</div></div>
+      <div class="pg-rep-avg"><b class="num">${S.all}</b><span>average</span></div></div>
+    <div class="pg-rep-chips"><span class="${all ? 'ok' : 'warn'}">${all ? '✓' : '!'} ${S.above}/${S.n} subjects at ${GOAL}+</span>${S.tight.length ? `<span class="warn">! ${S.tight.length} tight (90–92)</span>` : ''}${S.below.length ? `<span class="warn">! ${S.below.length} below ${GOAL}</span>` : ''}</div>
+    ${reportPlot(bms, { lang: 'en' })}
+    <p class="nd-sub" style="font-size:12px;margin:8px 0 0">Your goal for each subject: beat this report by 1 point (never below ${GOAL}). Practice in the app trains the 6 subjects at the top.</p></div>`;
+}
+
 export async function renderProgress() {
   show('progress');
   const body = $('#progress-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
-  let cat, done = [], lidx = {}, d = null;
+  let cat, done = [], lidx = {}, d = null, reps = [];
   try {
-    [cat, done, lidx, d] = await Promise.all([catalog(true), completedAttempts(viewerId(), 40), lessonsMeta().catch(() => ({})), dojoData().catch(() => null)]);
+    [cat, done, lidx, d, reps] = await Promise.all([catalog(true), completedAttempts(viewerId(), 40), lessonsMeta().catch(() => ({})), dojoData().catch(() => null), loadReports(true).catch(() => [])]);
   } catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
   const idx = chapterIndex(cat);
   const R = cat.rules || {};
   const MIN_ANSWERED = +R.min_answered || 15, NEEDS = +R.needs_work_threshold || 70, STRONG = +R.strong_threshold || 85, HINT = +R.hint_rate_threshold || 50;
   const SEAL = d?.R?.win || 80;
   const rows = Object.values(cat.statBy).filter(s => s.answered > 0 && idx[s.chapter_id]).map(s => ({ ...s, ch: idx[s.chapter_id] }));
+  const report = reportCard(reps);
   if (!rows.length && !done.length) {
-    body.innerHTML = '<div class="nd-card" style="text-align:center"><div class="nd-h2">No battles yet</div><p class="nd-sub" style="margin:6px 0 12px">Your first practice unlocks this page.</p><button class="nd-btn primary" data-nav="#/pick">Pick chapters →</button></div>';
+    body.innerHTML = report + '<div class="nd-card" style="text-align:center"><div class="nd-h2">No battles yet</div><p class="nd-sub" style="margin:6px 0 12px">Your first practice unlocks this page.</p><button class="nd-btn primary" data-nav="#/pick">Pick chapters →</button></div>';
     return;
   }
   const boss = Object.fromEntries((d?.bosses || []).map(b => [b.ch.chapter_id, b]));
@@ -94,6 +107,6 @@ export async function renderProgress() {
   const strongCard = strong.length ? `<div class="nd-card"><div class="row between" style="margin-bottom:6px"><div class="nd-h2" style="font-size:18px">Strong</div><span class="nd-label" style="color:var(--nd-ok)">${STRONG}%+ · few hints</span></div>
       ${strong.map(r => `<div class="pg-esc strong"><div class="pg-thumb">${thumb(r.chapter_id, 44)}</div><div class="grow"><b>${label(r)}</b><div class="nd-sub" style="font-size:12px">${esc(r.ch.name)}</div></div><span class="pg-pct num" style="color:var(--nd-ok)">${r.accuracy_recent}%</span></div>`).join('')}</div>` : '';
 
-  body.innerHTML = `<div class="nd-stack pg">${power}${trend}${escaped}${seals}${strongCard}${allCard}</div>`;
+  body.innerHTML = `<div class="nd-stack pg">${power}${report}${trend}${escaped}${seals}${strongCard}${allCard}</div>`;
   body.dataset.ready = '1';
 }

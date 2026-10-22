@@ -6,12 +6,14 @@ import { confirmRetreat } from '../retreat.js';
 import { monsterSVG, phaseOf } from '../monsters.js';
 import { bossState, rules } from '../dojo.js';
 import { show, navigate } from '../router.js';
+import { loadReports, benchmarks, benchFor, benchBanner } from '../report.js';
 
 let cat = null;
 let curSub = null;
 const sel = new Set(prefs.get('lastChapters', []));
 let len = prefs.get('lastLen', 30);
 let busy = false;
+let bms = [];
 
 const avail = (c) => c.distinct_items || 0;
 function available() {
@@ -25,6 +27,8 @@ function renderSubtabs() {
     const on = s.id === curSub;
     return `<button class="subtab ${on ? 'on' : ''}" style="--c:${m.color}" data-sub="${s.id}" role="tab" aria-selected="${on}">${esc(m.short)}${n ? ` <span class="cnt num">${n}</span>` : ''}</button>`;
   }).join('');
+  const cur = cat.subjects.find(x => x.id === curSub);
+  $('#benchpick').innerHTML = cur ? benchBanner(benchFor(bms, curSub), subjectMeta(cur).short) : '';
 }
 
 function renderChapters() {
@@ -129,6 +133,7 @@ export async function renderPick(arg) {
   if (wantLen === '50' || wantLen === '30') len = +wantLen;
   setLen(len);
   renderSubtabs(); renderChapters();
+  loadReports().then(r => { bms = benchmarks(r); if (cat) renderSubtabs(); }).catch(() => { /* banner is optional */ });
 }
 
 /* events (bound once) */

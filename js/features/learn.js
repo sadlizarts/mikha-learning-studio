@@ -9,6 +9,7 @@ import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { monsterSVG, phaseOf } from '../monsters.js';
 import { bossState, rules } from '../dojo.js';
 import { show, navigate } from '../router.js';
+import { loadReports, benchmarks, benchFor, benchBanner } from '../report.js';
 
 let learnSub = null;
 let lessonsCache = { at: 0, idx: null };
@@ -29,8 +30,8 @@ export async function renderLearn() {
   show('learn');
   const body = $('#learn-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:40vh"><div class="spin"></div></div>';
-  let cat, lidx, reads;
-  try { [cat, lidx, reads] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(viewerId())]); }
+  let cat, lidx, reads, reps;
+  try { [cat, lidx, reads, reps] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(viewerId()), loadReports().catch(() => [])]); }
   catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}<button class="btn block" style="margin-top:12px" data-nav="#/learn">Try again ↻</button></div>`; return; }
   const R = cat.rules || {};
   const DR = rules(cat), monPhase = (c) => { const st = cat.statBy[c.chapter_id]; return st ? phaseOf(bossState(st, false, DR), DR) : 'new'; };
@@ -61,6 +62,7 @@ export async function renderLearn() {
   const total = Object.keys(lidx).length;
   body.innerHTML = `<div class="stack">
     <div class="subtabs" role="tablist" aria-label="Subjects">${tabs}</div>
+    ${benchBanner(benchFor(benchmarks(reps), learnSub), m.short)}
     ${total ? '' : '<div class="panel sunk empty">No lessons published yet. Dad adds them in Admin → Lessons.</div>'}
     <div class="stack lgrid" style="gap:10px">${rows || '<div class="panel sunk empty">No chapters here yet.</div>'}</div>
   </div>`;

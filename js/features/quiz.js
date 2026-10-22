@@ -11,6 +11,7 @@ import { monsterSVG, examBoss, phaseOf, familyOf, formName, FAMILIES, GATE_ORDER
 import { STAGE_ART } from '../hero/art.js';
 import { staleWarning } from '../retreat.js';
 import { myRetreats } from '../store.js';
+import { loadReports, benchmarks, benchFor, benchLine } from '../report.js';
 
 const OK_WORDS = ['NICE!', 'BOOM!', 'SHARP!', 'GOT IT!', 'CLEAN!'];
 const BAD_WORDS = ['ALMOST', 'NOT YET', 'HMM…'];
@@ -104,6 +105,14 @@ export async function renderQuiz(id) {
     let pass = 85; try { pass = +(await catalog()).rules?.exam_pass || 85; } catch { /* default */ }
     eb.innerHTML = `🥋 <b>Rank exam · ${esc((RANKS[er] || {}).name || '')}</b> <span>Pass with ${pass}% or more</span>`;
   }
+  const bl = $('#benchline'); bl.hidden = true; bl.innerHTML = '';
+  if (!er && !S.qs.some(x => x.answer)) loadReports().then(r => {           // v2.9: remind the report-card benchmark before the first strike
+    if (S !== mine || S.qs.some(x => x.answer)) return;
+    const bms = benchmarks(r), seen = new Map();
+    for (const q of S.qs) { const sub = S.idx[q.chapter_id]?.subject; if (sub && !seen.has(sub.id)) seen.set(sub.id, sub); }
+    const list = [...seen.values()].map(sub => { const b = benchFor(bms, sub.id); return b ? { b, short: subjectMeta(sub).short } : null; });
+    bl.innerHTML = benchLine(list); bl.hidden = !bl.innerHTML;
+  }).catch(() => { /* optional */ });
   renderQ();
 }
 
@@ -111,6 +120,7 @@ function renderQ() {
   const q = qAt();
   S.hint = 0; S.locked = false; S.t0 = performance.now();
   const n = S.qs.length, done = S.qs.filter(x => x.answer).length;
+  if (done) $('#benchline').hidden = true;
   $('#qcount').textContent = `${S.i + 1} / ${n}`;
   $('#progbar').style.width = (done / n * 100) + '%';
   $('#progwrap').setAttribute('aria-valuenow', done);
@@ -211,6 +221,7 @@ async function choose(orig) {
   rl.hidden = !(!ok && hasAnchor(S.lidx, q.chapter_id, q.lesson_anchor));
   if (!rl.hidden) rl.innerHTML = `📖 Read: ${esc(anchorLabel(q.lesson_anchor))} ›`;
   const n = S.qs.length, done = S.qs.filter(x => x.answer).length;
+  $('#benchline').hidden = true;
   $('#progbar').style.width = (done / n * 100) + '%';
   $('#progwrap').setAttribute('aria-valuenow', done);
   const c = $('#combo');
