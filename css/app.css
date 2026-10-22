@@ -1138,3 +1138,33 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
 .rp-legend span{display:inline-flex;align-items:center;gap:6px}
 .rp-legend .rp-dot,.rp-legend .rp-tg{position:static;margin:0;display:inline-block}
 .rp-legend .rp-90{position:static;display:inline-block;height:12px}
+
+/* ===== v3.0.0 Boss Intel: scout screen, swipe cards, tap-check, battle buffs ===== */
+.it .it-boss{text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.it-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:900;padding:5px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.14);color:#fff;background:rgba(255,255,255,.05);white-space:nowrap}
+.it-chip.g{border-color:rgba(70,224,160,.6);background:rgba(70,224,160,.12)}.it-chip.y{border-color:rgba(255,210,90,.6);background:rgba(255,210,90,.12)}.it-chip.v{border-color:rgba(185,166,255,.6);background:rgba(185,166,255,.14)}
+.it-dots{display:flex;gap:5px;margin:10px 0 4px;flex:1}.it-dots i{height:6px;flex:1;border-radius:9px;background:rgba(255,255,255,.12)}.it-dots i.on{background:var(--nd-gold);box-shadow:0 0 10px rgba(255,210,90,.5)}
+.it-buff{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.07)}
+.it-buff .ic{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:17px;background:rgba(255,255,255,.07)}
+.it-buff b{display:block;font-size:14px}.it-buff span{font-size:12px;color:#C9C2E6}.it-buff .st{margin-left:auto;font-size:14px}
+.it-buff.lock{opacity:.5}
+.nd .nd-btn.block{display:flex;width:100%}.nd .nd-btn.lg{min-height:54px;font-size:16px}
+.it .nd-link{display:block;margin:0 auto}
+.it-prog{display:flex;align-items:center;gap:12px}.it-prog .it-dots{margin:0}
+.it-card{background:#1c1640;border:1px solid rgba(185,166,255,.35);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:transform .22s,opacity .22s;box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.it-card.out{transform:translateX(-40px);opacity:0}
+.it-content .lsec{margin:0}.it-content .lsec h3{font:400 24px 'Lilita One',sans-serif;color:#fff;line-height:1.15;margin:0 0 8px}
+.it-content p,.it-content li{font-size:15.5px;line-height:1.55;color:#E8E3FA}
+.it-check{margin-top:4px;background:rgba(70,224,160,.07);border:1px dashed rgba(70,224,160,.5);border-radius:16px;padding:12px}
+.it-q{font-weight:900;font-size:15px;line-height:1.4;margin:4px 0 8px;color:#fff}
+.it-opts{display:flex;flex-direction:column;gap:8px}
+.it-opt{text-align:left;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+.it-opt.right{border-color:#46E0A0;background:rgba(70,224,160,.18)}.it-opt.wrong{border-color:#FF6B7A;background:rgba(255,107,122,.15)}
+.it-opt:disabled{cursor:default}
+.it-fb{margin-top:10px;font-size:13.5px;line-height:1.45;color:#D9D3F2}.it-fb .ok{color:#46E0A0}.it-fb .bad{color:#FF8A95}
+.it-big{font:400 34px 'Lilita One',sans-serif;color:var(--nd-gold);text-shadow:0 0 22px rgba(255,190,60,.55);margin-top:6px}
+.it-buffs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.ichg{color:var(--nd-gold);font-weight:900}
+.screen.nd .buffs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.screen.nd .buffs[hidden]{display:none}
+.impact.shield{color:#46E0A0!important}
