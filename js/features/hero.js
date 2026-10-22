@@ -19,6 +19,7 @@ function lookFor(stage, equipped, assets) {
   if (m?.url) { look.assets.body = m.url; look.assets.hairBack = 'none'; look.assets.hairFront = 'none'; look.anchors.body = m.anchor; }
   else {   // painted concept art per stage (v2.1.0): one full-body painting replaces every vector layer; weapons are part of the painting
     look.assets.body = STAGE_ART(stage);
+    look.anchors.body = { x: 0, y: 100, scale: 1 };   // paintings end ~65 px (of 960) above the rig's foot line (y 1440): drop them onto the floor ring
     for (const k of ['hairBack', 'hairFront', 'outfit', 'back', 'armor', 'accessory', 'weapon']) look.assets[k] = 'none';
     return look;
   }
