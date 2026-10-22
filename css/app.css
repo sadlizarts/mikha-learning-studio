@@ -945,3 +945,15 @@ html.nd-on body{background:#0C0A18}
 .screen.nd .mistake,.screen.nd .brow{border:1px solid var(--nd-line);background:rgba(255,255,255,.04);border-radius:16px}
 .screen.nd .mistake .ans span{border-width:1px}
 .screen.nd .rankup{border:1px solid var(--belt);border-left:4px solid var(--belt);background:linear-gradient(120deg,color-mix(in srgb,var(--belt) 22%,transparent),rgba(255,255,255,.03))}
+/* ---- v2.5 Retreat ---- */
+.mon-wrap.angry img{filter:drop-shadow(0 0 10px rgba(255,70,90,.85)) saturate(1.25)!important}
+.mon-wrap .mon-angry{position:absolute;right:0;top:0;font-size:max(14px,22%);line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));animation:angryPulse 1.2s ease-in-out infinite}
+@keyframes angryPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2) rotate(-8deg)}}
+.hm-retreat{border-color:rgba(255,107,122,.5)!important;background:radial-gradient(80% 100% at 0% 0%,rgba(255,90,110,.18),transparent 70%),var(--nd-panel)}
+.hm-retreat .rt-line{display:flex;justify-content:space-between;gap:10px;font-weight:900;color:#fff;margin-top:6px}
+.hm-retreat .rt-line b{color:#FF9A9A;font-family:var(--display);font-weight:400;font-size:18px}
+.hm-retreat .rt-line.drop{color:#FF9A9A;font-size:13px}
+.ar-crit.ar-counter{background:linear-gradient(135deg,#7C5CFF,#46E0A0);top:56%;right:auto;left:50%;transform:translateX(-50%) rotate(-4deg);white-space:nowrap}
+.ar-crit.ar-counter{animation:ctrIn 1.5s ease-out forwards}
+@keyframes ctrIn{0%{opacity:0;transform:translateX(-50%) scale(.6) rotate(-4deg)}15%{opacity:1;transform:translateX(-50%) scale(1.1) rotate(-4deg)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-12px) rotate(-4deg)}}
+html.nd-on .sheet .btn.danger{background:linear-gradient(135deg,#FF5A6E,#FF8A6E);color:#2A0A10;border:0}
