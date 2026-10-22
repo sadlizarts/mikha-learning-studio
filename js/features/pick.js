@@ -1,6 +1,8 @@
 // Pick chapters (DESIGN §5.3, PRD FR-11..FR-13, FR-20, FR-25a, FR-27).
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast } from '../ui.js';
-import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress } from '../store.js';
+import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress, intelCharges } from '../store.js';
+import { lessonsMeta } from './learn.js';
+import { bossName } from '../dojo.js';
 import { app, catalog } from '../state.js';
 import { confirmRetreat } from '../retreat.js';
 import { monsterSVG, phaseOf } from '../monsters.js';
@@ -69,9 +71,32 @@ function setLen(v) {
   $$('.len').forEach(x => { const on = +x.dataset.len === v; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
 }
 
+/** v3.0: offer Boss Intel before a battle on a chapter that has a lesson and no charge (once per chapter per day). */
+async function scoutPrompt(ids) {
+  if (app.viewAs || app.profile?.role === 'admin') return false;
+  let charges = {}, lidx = {};
+  try { [charges, lidx] = await Promise.all([intelCharges(app.user.id), lessonsMeta()]); } catch { return false; }
+  const today = new Date().toISOString().slice(0, 10), asked = prefs.get('scoutAsked', {});
+  const seen = asked.d === today ? asked.ids || [] : [];
+  const cand = ids.filter(id => lidx[id] && !charges[id] && !seen.includes(id));
+  if (!cand.length) return false;
+  prefs.set('scoutAsked', { d: today, ids: [...seen, ...cand] });
+  const ch = cat.chapters.find(c => c.chapter_id === cand[0]);
+  const boss = ch ? bossName(ch, subjectMeta(cat.subjects.find(s => s.id === ch.subject_id)).key).name : 'this boss';
+  const v = await sheet({
+    title: 'Scout first?',
+    body: `<p>Read short <b>Intel cards</b> about <b>${esc(boss)}</b> (≈1 min each) and this battle gets:</p><p>🛡️ Shield · ⚡ Weak spot ×2 · ✨ +20% XP</p>`,
+    actions: [{ label: '📜 Read intel first', value: 'read', cls: 'primary' }, { label: '⚔️ Fight now', value: 'fight' }],
+  });
+  return v === 'read' ? cand[0] : v === 'fight' ? false : null;
+}
+
 async function start() {
   if (busy) return;
   const ids = cat.chapters.filter(c => sel.has(c.chapter_id)).map(c => c.chapter_id);
+  const scout = await scoutPrompt(ids);
+  if (scout === null) return;
+  if (scout) { prefs.set('lastChapters', ids); navigate(`#/intel/${scout}/read`); return; }
   busy = true; updateMeta();
   try {
     let data;

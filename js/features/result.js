@@ -103,7 +103,7 @@ export async function renderResult(id, { fresh }) {
       <div><div class="v num">${fmtDur(a.duration_s)}</div><div class="l">Time</div></div>
       <div><div class="v num">${hintsUsed}</div><div class="l">Hints used</div></div>
     </div>
-    <div class="xpgain"><span aria-hidden="true" style="font-size:22px">⚡</span><div class="grow">XP earned${done?.counters ? `<div style="font-size:12px;font-weight:800;opacity:.8">incl. ${done.counters} counter strike${done.counters === 1 ? '' : 's'} (+${done.counters * 5})</div>` : ''}</div><b class="num">+${xp}</b></div>
+    <div class="xpgain"><span aria-hidden="true" style="font-size:22px">⚡</span><div class="grow">XP earned${done?.counters || done?.intel_xp ? `<div style="font-size:12px;font-weight:800;opacity:.8">incl. ${[done.counters ? `${done.counters} counter strike${done.counters === 1 ? '' : 's'} (+${done.counters * 5})` : '', done.intel_xp ? `✨ Intel bonus (+${done.intel_xp})` : ''].filter(Boolean).join(' · ')}</div>` : ''}</div><b class="num">+${xp}</b></div>
     ${levelUp}
     ${examHtml}${notes}
     <div id="bossreport"></div>

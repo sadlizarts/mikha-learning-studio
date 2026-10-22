@@ -10,7 +10,9 @@ import { RANKS, rules, bossState, bossName } from '../dojo.js';
 import { monsterSVG, examBoss, phaseOf, familyOf, formName, FAMILIES, GATE_ORDER } from '../monsters.js';
 import { STAGE_ART } from '../hero/art.js';
 import { staleWarning } from '../retreat.js';
-import { myRetreats } from '../store.js';
+import { myRetreats, intelCharges } from '../store.js';
+import { BUFFS } from './intel.js';
+import { viewerId } from '../state.js';
 import { loadReports, benchmarks, benchFor, benchLine } from '../report.js';
 
 const OK_WORDS = ['NICE!', 'BOOM!', 'SHARP!', 'GOT IT!', 'CLEAN!'];
@@ -41,7 +43,8 @@ function foeFor(q) {
   const angry = B.angry?.has(q.chapter_id);
   return { key: q.chapter_id, name: (angry ? '😠 ' : '') + bossName(ch, m.key).name, sub: `${angry ? 'Angry · ' : ''}${formName(fam, ph)} · ${m.short} ${shortCode(ch.code)}`, html: monsterSVG(ch, { phase: ph, size: 150, angry }), color: FAMILIES[fam].c, pool: S.qs.filter(x => x.chapter_id === q.chapter_id) };
 }
-const foeHp = (foe) => Math.max(0, Math.round(100 - 100 * foe.pool.filter(x => x.answer?.is_correct).length / Math.max(1, foe.pool.length)));
+const weakOn = (key) => (S?.intel?.[key] || 0) >= 2;   // v3.0 Intel: weak spot = double damage on that chapter's boss
+const foeHp = (foe) => Math.max(0, Math.round(100 - (weakOn(foe.key) ? 200 : 100) * foe.pool.filter(x => x.answer?.is_correct).length / Math.max(1, foe.pool.length)));
 function drawArena(q, { swap = true } = {}) {
   const foe = foeFor(q), ar = $('#arena');
   ar.hidden = !foe; if (!foe) return null;
@@ -57,7 +60,7 @@ function strike(ok, q, counter = false) {
   $('#arhp').style.width = hp + '%'; $('#arhpt').textContent = `HP ${hp}%`;
   const fx = $('#arfx'), mon = $('#armon .mon-wrap');
   if (ok) {
-    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}</b>${hp === 0 ? '<b class="ar-ko">SEALED!</b>' : counter ? '<span class="ar-crit ar-counter">COUNTER STRIKE +5 XP</span>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
+    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}${weakOn(foe.key) ? ' ×2!' : ''}</b>${hp === 0 ? '<b class="ar-ko">SEALED!</b>' : counter ? '<span class="ar-crit ar-counter">COUNTER STRIKE +5 XP</span>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
     if (mon) { mon.classList.remove('hit'); void mon.offsetWidth; mon.classList.add('hit'); }
   } else {
     fx.innerHTML = '<i class="ar-claw"></i>';
@@ -69,7 +72,17 @@ function strike(ok, q, counter = false) {
   if (S.combo >= 2) { c.textContent = `×${S.combo} combo`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } else c.hidden = true;
 }
 
-let S = null; // { data, qs, i, hint, t0, combo, idx, locked }
+let S = null; // { data, qs, i, hint, t0, combo, idx, locked, intel, shield }
+
+function drawBuffs() {
+  const el = $('#buffs'), lv = Math.max(0, ...Object.values(S?.intel || {}));
+  if (!lv) { el.hidden = true; return; }
+  const weak = Object.entries(S.intel).filter(([, l]) => l >= 2).map(([id]) => shortCode(S.idx[id]?.code || '')).filter(Boolean);
+  el.innerHTML = `<span class="it-chip ${S.shield === 'used' ? '' : 'g'}">🛡️ Shield ${S.shield === 'used' ? 'used' : 'ready'}</span>`
+    + (lv >= 2 ? `<span class="it-chip y">⚡ ${BUFFS[1].name}${weak.length && Object.keys(S.intel).length < (S.data.attempt.chapter_ids || []).length ? ` · ${esc(weak.join(', '))}` : ''}</span>` : '')
+    + (lv >= 3 ? `<span class="it-chip v">✨ ${BUFFS[2].name}</span>` : '');
+  el.hidden = false;
+}
 
 const qAt = () => S.qs[S.i];
 const firstOpen = () => S.qs.findIndex(q => !q.answer);
@@ -85,6 +98,7 @@ export async function renderQuiz(id) {
     toast("You're offline. Answers will sync later.", 2500);
   }
   const st = data.attempt.status;
+  $('#buffs').hidden = true;
   if (st === 'completed') { navigate(`#/session/${id}`, { replace: true }); return; }
   if (st !== 'in_progress') { toast('That practice was closed. Start a new one from Home.', 3000); navigate('#/home', { replace: true }); return; }
   let idx = {}, cat = null;
@@ -105,6 +119,14 @@ export async function renderQuiz(id) {
     let pass = 85; try { pass = +(await catalog()).rules?.exam_pass || 85; } catch { /* default */ }
     eb.innerHTML = `🥋 <b>Rank exam · ${esc((RANKS[er] || {}).name || '')}</b> <span>Pass with ${pass}% or more</span>`;
   }
+  S.intel = {}; S.shield = null;
+  if (!er) intelCharges(viewerId()).then(ch => {                       // v3.0 Boss Intel buffs for the chapters in this battle
+    if (S !== mine) return;
+    for (const id of data.attempt.chapter_ids || []) if (ch[id]) S.intel[id] = ch[id];
+    const lv = Math.max(0, ...Object.values(S.intel));
+    if (lv >= 1 && S.shield === null) S.shield = 'ready';
+    drawBuffs(); $('#arena').dataset.foe = ''; if (!S.locked) drawArena(qAt());
+  }).catch(() => { /* buffs are optional */ });
   const bl = $('#benchline'); bl.hidden = true; bl.innerHTML = '';
   if (!er && !S.qs.some(x => x.answer)) loadReports().then(r => {           // v2.9: remind the report-card benchmark before the first strike
     if (S !== mine || S.qs.some(x => x.answer)) return;
@@ -207,12 +229,15 @@ async function choose(orig) {
   $('#hintbtn').hidden = true;
 
   const counter = ok && S.prevOk === false; S.prevOk = ok;
-  S.combo = ok ? S.combo + 1 : 0;
+  let shielded = false;
+  if (!ok && S.shield === 'ready' && (S.intel?.[q.chapter_id] || 0) >= 1) { S.shield = 'used'; shielded = true; drawBuffs(); }
+  S.combo = ok ? S.combo + 1 : shielded ? S.combo : 0;
   const imp = $('#impact');
   imp.textContent = counter ? 'COUNTER!' : ok ? pick(OK_WORDS) : pick(BAD_WORDS);
   imp.className = 'impact' + (ok ? '' : ' bad');
   const mk = $('#mk-quiz'); mk.classList.remove('happy', 'sad'); void mk.offsetWidth; mk.classList.add(ok ? 'happy' : 'sad');
-  $('#mkline').textContent = counter ? 'Counter strike! +5 XP for bouncing back.' : ok ? pick(OK_LINES) : pick(BAD_LINES);
+  $('#mkline').textContent = shielded ? '🛡️ Shield blocked it! Your combo is safe.' : counter ? 'Counter strike! +5 XP for bouncing back.' : ok ? pick(OK_LINES) : pick(BAD_LINES);
+  if (shielded) { imp.textContent = 'SHIELD!'; imp.className = 'impact shield'; }
   try { strike(ok, q, counter); } catch { /* battle is decoration */ }
   $('#explain').className = 'panel explain' + (ok ? '' : ' bad');
   $('#explain-h').textContent = ok ? "Why it's right" : 'What to remember';

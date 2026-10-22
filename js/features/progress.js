@@ -89,7 +89,7 @@ export async function renderProgress() {
       ${needs.map(r => `<div class="pg-esc" style="--c:${FAMILIES[boss[r.chapter_id]?.fam || 'sci'].c}">
         <div class="pg-thumb">${thumb(r.chapter_id)}</div>
         <div class="grow" style="min-width:0"><b>${esc(boss[r.chapter_id]?.name || r.ch.name)}</b><div class="nd-sub" style="font-size:12px">${label(r)} · ${esc(r.ch.name)}</div>
-          <div class="pg-acts">${lidx[r.chapter_id] ? `<button class="nd-btn small" data-nav="#/lesson/${r.chapter_id}">Read first</button>` : ''}<button class="nd-btn small primary" data-nav="#/pick/${r.chapter_id}">Hunt →</button></div></div>
+          <div class="pg-acts">${lidx[r.chapter_id] ? `<button class="nd-btn small" data-nav="#/intel/${r.chapter_id}">📜 Intel first</button>` : ''}<button class="nd-btn small primary" data-nav="#/pick/${r.chapter_id}">Hunt →</button></div></div>
         <span class="pg-pct num">${r.accuracy_recent}%</span></div>`).join('')}</div>` : '';
 
   const fams = Object.keys(FAMILIES).map(k => ({ k, f: FAMILIES[k], list: (d?.bosses || []).filter(b => b.fam === k) })).filter(x => x.list.length);

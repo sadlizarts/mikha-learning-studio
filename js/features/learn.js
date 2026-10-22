@@ -3,7 +3,7 @@
 // #/lesson/<chapterId>/p/<slug>[/<anchor>] → one reading page (converted Study Studio chapter, v1.3.0).
 // openLessonSheet() shows the lesson or the page that holds an anchor over the quiz/result (92 % bottom sheet).
 import { $, $$, esc, setMascot, subjectMeta, shortCode, toast, reducedMotion } from '../ui.js';
-import { lessonIndex, myLessonReads, loadLesson, lessonImages, completeLesson, loadPage, markPage, pageForAnchor } from '../store.js';
+import { intelCharges, lessonIndex, myLessonReads, loadLesson, lessonImages, completeLesson, loadPage, markPage, pageForAnchor } from '../store.js';
 import { parseLesson, renderSections, inline } from '../lesson-md.js';
 import { app, catalog, chapterIndex, viewerId } from '../state.js';
 import { monsterSVG, phaseOf } from '../monsters.js';
@@ -30,8 +30,8 @@ export async function renderLearn() {
   show('learn');
   const body = $('#learn-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:40vh"><div class="spin"></div></div>';
-  let cat, lidx, reads, reps;
-  try { [cat, lidx, reads, reps] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(viewerId()), loadReports().catch(() => [])]); }
+  let cat, lidx, reads, reps, charges;
+  try { [cat, lidx, reads, reps, charges] = await Promise.all([catalog(), lessonsMeta(true), myLessonReads(viewerId()), loadReports().catch(() => []), intelCharges(viewerId()).catch(() => ({}))]); }
   catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}<button class="btn block" style="margin-top:12px" data-nav="#/learn">Try again ↻</button></div>`; return; }
   const R = cat.rules || {};
   const DR = rules(cat), monPhase = (c) => { const st = cat.statBy[c.chapter_id]; return st ? phaseOf(bossState(st, false, DR), DR) : 'new'; };
@@ -54,10 +54,12 @@ export async function renderLearn() {
     if (isNeedsWork(st, R)) bits.push('<span class="nw">Needs work</span>');
     const pages = L.pages || [];
     const mins = (L.read_minutes || 0) + pages.reduce((t, p) => t + (p.read_minutes || 0), 0);
-    if (pages.length) bits.push(`<span class="num">${(r?.pages_read || []).filter(x => pages.some(p => p.slug === x)).length}/${pages.length} pages</span>`);
-    bits.push(`≈ ${mins || 6} min`);
+    const lv = charges[c.chapter_id] || 0;
+    if (lv) bits.push(`<span class="ichg num">⚡ Intel ${lv}/3</span>`);
+    if (r?.cards_total) bits.push(`<span class="num">📜 ${Math.min(r.cards_read, r.cards_total)}/${r.cards_total} cards${r.cards_read > r.cards_total ? ' ✓' : ''}</span>`);
+    else bits.push(`📜 Intel cards · ≈ ${L.read_minutes || mins || 6} min`);
     if (r?.quick_check_total) bits.push(`<span class="num">Quick check ${r.quick_check_score}/${r.quick_check_total}</span>`);
-    return `<button class="lrow" style="--c:${m.color}" data-nav="#/lesson/${c.chapter_id}"><div class="code mcode">${monsterSVG(c, { phase: monPhase(c), size: 50 })}<b class="cbadge">${esc(shortCode(c.code))}</b></div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${bits.join(' · ')}</div></div><span aria-hidden="true" style="color:var(--ink-3);font-weight:900">›</span></button>`;
+    return `<button class="lrow" style="--c:${m.color}" data-nav="#/intel/${c.chapter_id}"><div class="code mcode">${monsterSVG(c, { phase: monPhase(c), size: 50 })}<b class="cbadge">${esc(shortCode(c.code))}</b></div><div class="grow"><div class="name">${esc(c.name)}</div><div class="meta">${bits.join(' · ')}</div></div><span aria-hidden="true" style="color:var(--ink-3);font-weight:900">›</span></button>`;
   }).join('');
   const total = Object.keys(lidx).length;
   body.innerHTML = `<div class="stack">
