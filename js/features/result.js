@@ -2,6 +2,9 @@
 import { rich, $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reducedMotion } from '../ui.js';
 import { getAttempt, startAttempt, loadDojo, loadProgress } from '../store.js';
 import { dojoFrom, openBoss } from './dojo.js';
+import { monsterSVG, phaseOf } from '../monsters.js';
+import { bossState, rules } from '../dojo.js';
+import { STAGE_ART } from '../hero/art.js';
 import { RANKS, bossSVG, cardSVG, beltSVG, cardTier, TIER_LABEL } from '../dojo.js';
 import { app, catalog, chapterIndex } from '../state.js';
 import { show, navigate } from '../router.js';
@@ -49,11 +52,16 @@ export async function renderResult(id, { fresh }) {
   for (const q of answered) {
     const r = by.get(q.chapter_id) || { c: 0, n: 0 }; r.n++; if (q.answer.is_correct) r.c++; by.set(q.chapter_id, r);
   }
+  let catR = null; try { const c0 = await catalog(); catR = { R: rules(c0), statBy: c0.statBy }; } catch { /* thumbnails fall back */ }
+  const winAt = catR?.R?.win || 80;
   const chapRows = [...by].map(([cid, r]) => {
     const ch = idx[cid]; const m = subjectMeta(ch?.subject);
-    const p = Math.round(100 * r.c / r.n);
-    return `<div class="chapbar"><div class="lbl"><span>${esc(ch ? `${m.short} ${shortCode(ch.code)} · ${ch.name}` : 'Chapter')}</span><span class="num">${r.c}/${r.n}</span></div>
-      <div class="bar" role="img" aria-label="${p}% correct"><i style="--p:${p}%;--c:${m.color}"></i></div></div>`;
+    const p = Math.round(100 * r.c / r.n), won = p >= winAt;
+    let ph = 'boss'; try { const st = catR?.statBy?.[cid]; ph = st ? phaseOf(bossState(st, false, catR.R), catR.R) : 'minion'; if (ph === 'new') ph = 'minion'; if (ph === 'sealed') ph = 'boss'; } catch { /* default */ }
+    return `<div class="chapbar rb-row ${won ? 'won' : 'lost'}" style="--c:${m.color}">${ch ? `<div class="rb-mon">${monsterSVG(ch, { phase: ph, size: 52 })}</div>` : ''}
+      <div class="grow"><div class="lbl"><span>${esc(ch ? `${m.short} ${shortCode(ch.code)} · ${ch.name}` : 'Chapter')}</span><span class="num">${r.c}/${r.n}</span></div>
+      <div class="bar" role="img" aria-label="${p}% correct"><i style="--p:${p}%;--c:${m.color}"></i></div>
+      <div class="rb-tag">${won ? `Won this battle · ${p}%` : `It escaped · ${p}% (need ${winAt}%)`}</div></div></div>`;
   }).join('');
 
   const optText = (q, k) => q.options?.[k] ?? k;
@@ -85,6 +93,7 @@ export async function renderResult(id, { fresh }) {
   body.innerHTML = `<div class="stack">
     <div class="panel result-hero">
       <div class="burst"></div>
+      <div class="rh-ava ${score >= 65 ? 'happy' : 'sad'}" id="rhava" aria-hidden="true"></div>
       <div class="eyebrow" style="position:relative">${fresh ? 'Practice complete' : esc(new Date(a.finished_at).toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</div>
       <div class="scorebig num" id="scorebig">${score}<small>/100</small></div>
       <div class="band ${bcls}">${btxt}</div>
@@ -98,7 +107,7 @@ export async function renderResult(id, { fresh }) {
     ${levelUp}
     ${examHtml}${notes}
     <div id="bossreport"></div>
-    <div class="panel"><div class="eyebrow" style="margin-bottom:10px">By chapter</div><div class="stack" style="gap:12px">${chapRows}</div></div>
+    <div class="panel"><div class="eyebrow" style="margin-bottom:10px">Battles this session</div><div class="stack" style="gap:12px">${chapRows}</div></div>
     <div><h3 style="font-size:20px;margin-bottom:8px">Review mistakes${wrong.length ? ` <span class="note num">(${wrong.length})</span>` : ''}</h3><div class="stack" style="gap:10px">${mistakes}</div></div>
     <div class="row" style="gap:10px">
       <button class="btn block" style="flex:1" data-nav="#/home">Home</button>
@@ -106,6 +115,7 @@ export async function renderResult(id, { fresh }) {
     </div>
   </div>`;
   if (fresh) countUp($('#scorebig'), score);
+  loadProgress().then(p => { const el = $('#rhava'); if (el) el.style.backgroundImage = `url(${STAGE_ART(p?.rank || 0)})`; }).catch(() => { /* avatar stays blank */ });
   if (fresh && !a.is_preview) bossReport(a, done).catch(() => { /* report is a bonus */ });
   body.querySelectorAll('[data-read]').forEach(b => b.onclick = () => openLessonSheet(b.dataset.read, b.dataset.anchor));
   $('#result-body').scrollTop = 0;

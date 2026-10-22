@@ -1,15 +1,68 @@
 // Practice screen (DESIGN §5.4, PRD §7.4, §7.8, FR-22..FR-26).
 // Feedback is shown instantly from the answer_key the client already has; the server grades again in answer_question.
-import { rich, $, $$, esc, setMascot, subjectMeta, shortCode, sheet, toast, pick, BULB, reducedMotion } from '../ui.js';
-import { getAttempt, cachedAttempt, saveAnswer, completeAttempt, imageUrl, flushAnswers } from '../store.js';
+import { rich, $, $$, esc, subjectMeta, shortCode, sheet, toast, pick, BULB, reducedMotion } from '../ui.js';
+import { getAttempt, cachedAttempt, saveAnswer, completeAttempt, imageUrl, flushAnswers, loadProgress } from '../store.js';
 import { catalog, chapterIndex } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
 import { lessonsMeta, hasAnchor, openLessonSheet } from './learn.js';
 import { anchorLabel } from '../lesson-md.js';
-import { RANKS } from '../dojo.js';
+import { RANKS, rules, bossState, bossName } from '../dojo.js';
+import { monsterSVG, examBoss, phaseOf, familyOf, formName, FAMILIES, GATE_ORDER } from '../monsters.js';
+import { STAGE_ART } from '../hero/art.js';
 
 const OK_WORDS = ['NICE!', 'BOOM!', 'SHARP!', 'GOT IT!', 'CLEAN!'];
 const BAD_WORDS = ['ALMOST', 'NOT YET', 'HMM…'];
+const OK_LINES = ['Nice hit!', 'Clean strike!', 'That one landed!', 'Keep the pressure on!', 'Great focus!'];
+const BAD_LINES = ['It hit back. Read why below.', 'Shake it off, next one!', 'Learn the trick, then strike back.'];
+
+/* ---- v2.4 light battle: the chapter's monster sits above the question; battle HP = share of this chapter's questions still unanswered-correctly ---- */
+function battleSetup(cat) {
+  const R = rules(cat), chs = cat ? Object.fromEntries(cat.chapters.map(c => [c.chapter_id, c])) : {};
+  const er = S.data.attempt.exam_rank;
+  let exam = null;
+  if (er && cat) {
+    const order = GATE_ORDER.filter(k => cat.chapters.some(c => familyOf(c) === k));
+    exam = (order.length ? order : GATE_ORDER)[er % (order.length || GATE_ORDER.length)];
+  }
+  S.battle = { R, chs, statBy: cat?.statBy || {}, exam };
+}
+function foeFor(q) {
+  const B = S.battle; if (!B) return null;
+  if (B.exam) { const f = FAMILIES[B.exam]; return { key: 'exam', name: f.forms[3], sub: `Exam Boss · ${f.name}`, html: examBoss(B.exam, { size: 150 }), color: f.c, pool: S.qs }; }
+  const ch = B.chs[q.chapter_id] || S.idx[q.chapter_id]; if (!ch) return null;
+  const st = B.statBy[q.chapter_id];
+  let ph = st ? phaseOf(bossState(st, false, B.R), B.R) : 'minion';
+  if (ph === 'new') ph = 'minion'; if (ph === 'sealed') ph = 'boss';
+  const fam = familyOf(ch), m = subjectMeta(ch.subject || S.idx[q.chapter_id]?.subject);
+  return { key: q.chapter_id, name: bossName(ch, m.key).name, sub: `${formName(fam, ph)} · ${m.short} ${shortCode(ch.code)}`, html: monsterSVG(ch, { phase: ph, size: 150 }), color: FAMILIES[fam].c, pool: S.qs.filter(x => x.chapter_id === q.chapter_id) };
+}
+const foeHp = (foe) => Math.max(0, Math.round(100 - 100 * foe.pool.filter(x => x.answer?.is_correct).length / Math.max(1, foe.pool.length)));
+function drawArena(q, { swap = true } = {}) {
+  const foe = foeFor(q), ar = $('#arena');
+  ar.hidden = !foe; if (!foe) return null;
+  if (swap && ar.dataset.foe !== foe.key) { $('#armon').innerHTML = foe.html; ar.dataset.foe = foe.key; ar.style.setProperty('--fc', foe.color); $('#arfx').innerHTML = ''; }
+  $('#arname').textContent = `${foe.name} · ${foe.sub}`;
+  const hp = foeHp(foe); $('#arhp').style.width = hp + '%'; $('#arhpt').textContent = `HP ${hp}%`;
+  return foe;
+}
+function strike(ok, q) {
+  const ar = $('#arena'); if (ar.hidden) return;
+  const foe = foeFor(q); if (!foe) return;
+  const before = parseInt($('#arhp').style.width) || 100, hp = foeHp(foe);
+  $('#arhp').style.width = hp + '%'; $('#arhpt').textContent = `HP ${hp}%`;
+  const fx = $('#arfx'), mon = $('#armon .mon-wrap');
+  if (ok) {
+    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}</b>${hp === 0 ? '<b class="ar-ko">SEALED!</b>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
+    if (mon) { mon.classList.remove('hit'); void mon.offsetWidth; mon.classList.add('hit'); }
+  } else {
+    fx.innerHTML = '<i class="ar-claw"></i>';
+    ar.classList.remove('counter'); void ar.offsetWidth; ar.classList.add('counter');
+    document.querySelector('#s-quiz .qcard')?.classList.remove('shake'); void ar.offsetWidth; document.querySelector('#s-quiz .qcard')?.classList.add('shake');
+    try { navigator.vibrate?.(120); } catch { /* not supported (iOS) */ }
+  }
+  const c = $('#arcombo');
+  if (S.combo >= 2) { c.textContent = `×${S.combo} combo`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } else c.hidden = true;
+}
 
 let S = null; // { data, qs, i, hint, t0, combo, idx, locked }
 
@@ -29,9 +82,12 @@ export async function renderQuiz(id) {
   const st = data.attempt.status;
   if (st === 'completed') { navigate(`#/session/${id}`, { replace: true }); return; }
   if (st !== 'in_progress') { toast('That practice was closed. Start a new one from Home.', 3000); navigate('#/home', { replace: true }); return; }
-  let idx = {};
-  try { idx = chapterIndex(await catalog()); } catch { /* chip falls back to plain text */ }
+  let idx = {}, cat = null;
+  try { cat = await catalog(); idx = chapterIndex(cat); } catch { /* chip falls back to plain text */ }
   S = { data, qs: data.questions, i: 0, hint: 0, t0: 0, combo: 0, idx, locked: false, lidx: null };
+  try { battleSetup(cat); } catch { S.battle = null; }
+  $('#arena').dataset.foe = '';
+  loadProgress().then(p => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(p?.rank || 0)})`; }).catch(() => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(0)})`; });
   const mine = S;
   lessonsMeta().then(x => { mine.lidx = x; }).catch(() => { /* Read links just stay hidden */ });
   const open = firstOpen();
@@ -59,6 +115,7 @@ function renderQ() {
   const m = subjectMeta(ch?.subject);
   $('#qchip').style.setProperty('--c', m.color);
   $('#qchip .txt').textContent = ch ? `${m.short} · ${shortCode(ch.code)} ${ch.name}` : 'Practice';
+  try { drawArena(q); } catch { $('#arena').hidden = true; }
 
   // context panel (FR-22c): folded when the previous question used the same text
   const ctx = $('#ctx');
@@ -93,6 +150,7 @@ function renderQ() {
   $('#readlink').hidden = true;
   $('#syncnote').hidden = true;
   $('#combo').hidden = true;
+  $('#arfx').innerHTML = '';
   $('#qscroll').scrollTop = 0;
 }
 
@@ -127,7 +185,9 @@ async function choose(orig) {
   const imp = $('#impact');
   imp.textContent = ok ? pick(OK_WORDS) : pick(BAD_WORDS);
   imp.className = 'impact' + (ok ? '' : ' bad');
-  setMascot($('#m-quiz'), ok ? 'happy' : 'sad', ok ? 'happy' : 'sad');
+  const mk = $('#mk-quiz'); mk.classList.remove('happy', 'sad'); void mk.offsetWidth; mk.classList.add(ok ? 'happy' : 'sad');
+  $('#mkline').textContent = ok ? pick(OK_LINES) : pick(BAD_LINES);
+  try { strike(ok, q); } catch { /* battle is decoration */ }
   $('#explain').className = 'panel explain' + (ok ? '' : ' bad');
   $('#explain-h').textContent = ok ? "Why it's right" : 'What to remember';
   $('#exptext').innerHTML = rich(q.explanation || '');
@@ -138,12 +198,12 @@ async function choose(orig) {
   $('#progbar').style.width = (done / n * 100) + '%';
   $('#progwrap').setAttribute('aria-valuenow', done);
   const c = $('#combo');
-  if (S.combo >= 3) { c.textContent = `🔥 ${S.combo} in a row!`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
+  if (S.combo >= 3 && $('#arena').hidden) { c.textContent = `🔥 ${S.combo} in a row!`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
   if (ok && S.combo >= 5 && S.combo % 5 === 0) surge(S.combo);
   const last = firstOpen() === -1;
   $('#nextbtn').textContent = last ? 'See results →' : 'Next →';
   $('#feedback').hidden = false;
-  setTimeout(() => $('#nextbtn').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'end' }), 80);
+  setTimeout(() => $('#nextbtn').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'end' }), $('#arena').hidden || reducedMotion() ? 80 : 700);   // let the strike play first
 
   const attemptId = S.data.attempt.id;
   const synced = await saveAnswer(attemptId, q.question_id, orig, q.answer.hint_level, ms);
