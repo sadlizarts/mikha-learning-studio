@@ -167,7 +167,7 @@ export async function renderHome() {
 
   let rt = null; try { rt = await myRetreats(vid); } catch { /* notice is optional */ }
   const unseen = (rt?.unseen || []);
-  const rtCard = viewing ? (rt?.today ? `<div class="nd-card hm-retreat"><div class="nd-label" style="color:#FF9A9A">Retreats today</div><b class="num">${rt.today}</b></div>` : '')
+  const rtCard = viewing ? ''   // Dad's view: covered by the 'Perlu perhatian' summary
     : unseen.length ? `<div class="nd-card hm-retreat" id="rtcard"><div class="nd-label" style="color:#FF9A9A">😠 Retreat recorded</div>
       ${unseen.map(r => `<div class="rt-line"><span>${r.auto ? 'Practice left for 24 hours' : `Retreat #${r.nth} today`}</span><b class="num">−${r.xp_lost} XP</b></div>${r.rank_after < r.rank_before ? `<div class="rt-line drop">Belt dropped to ${esc(RANKS[r.rank_after]?.belt || '')}. Pass the exam again to win it back.</div>` : ''}`).join('')}
       <p class="nd-sub" style="margin:6px 0 10px">Finish your battles to calm the angry monsters. Wrong answers come back first.</p>
@@ -191,11 +191,16 @@ export async function renderHome() {
     </div>
     <div class="row between" style="margin-top:6px;flex-wrap:wrap;gap:8px">
       <span class="nd-sub" style="font-size:12px">Signed in as ${esc(app.profile?.display_name || '')}${app.profile?.role === 'admin' ? ' · admin' : ''}</span>
-      <span class="row" style="gap:8px">${app.profile?.role === 'admin' ? '<button class="btn ghost small" data-nav="#/admin/import">Admin</button>' : ''}<button class="btn ghost small" id="pwbtn">Password</button><button class="btn ghost small" id="signout">Sign out</button></span>
+      <span class="row" style="gap:8px">${app.profile?.role === 'admin' ? '<button class="btn ghost small" data-nav="#/admin/overview">Admin</button>' : ''}<button class="btn ghost small" id="pwbtn">Password</button><button class="btn ghost small" id="signout">Sign out</button></span>
     </div>
   </div>`;
   body.dataset.ready = '1';
   bindHomeDojo(body, dd);
+  if (viewing) import('./admin/overview.js').then(async m => {   // Dad's view: the admin "Perlu perhatian" summary on top (v2.7.0)
+    const o = await m.overviewData(); const el = document.createElement('div'); el.className = 'hm-dad';
+    el.innerHTML = m.attentionCard(m.attentionItems(o), { title: 'Perlu perhatian · untuk Dad' }) + '<button class="nd-link" data-nav="#/admin/overview" style="margin-top:6px">Buka dashboard admin ›</button>';
+    body.querySelector('.hm')?.prepend(el);
+  }).catch(() => { /* summary is optional */ });
   const rto = $('#rtok'); if (rto) rto.onclick = () => { markRetreatsSeen(); $('#rtcard')?.remove(); };
 
   $('#pwbtn').onclick = () => passwordSheet();
