@@ -1217,3 +1217,52 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
 .cos .tx{display:flex;flex-direction:column;min-width:0}.cos .rr{font-size:10px;font-weight:900;text-transform:uppercase}.cos b{font-size:13.5px;line-height:1.2}.cos .st{font-size:11px;color:#C9C2E6}
 .cos .ci-aura{width:38px;height:38px}.cos .ci-frame{width:32px;height:42px;border-width:3px}
 .shards{font-size:18px;color:#B9E8FF}
+
+/* ===== v3.2.0 battle modes, daily quests, Monster Dex ===== */
+.modebar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.modebar .mode{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#C9C2E6;font-weight:900;font-size:12.5px;font-family:inherit;cursor:pointer}
+.modebar .mode span{font-size:20px;line-height:1}
+.modebar .mode i{font-style:normal;font-size:10.5px;color:#FFD25A}
+.modebar .mode.on{color:#fff;border-color:#FFD25A;background:rgba(255,210,90,.12);box-shadow:0 0 14px rgba(255,210,90,.2)}
+.revinfo[hidden],#subtabs[hidden],#chaplist[hidden],#benchpick[hidden],.lenbar[hidden]{display:none!important}
+.rhud .blitzt{font-size:15px;color:#FFD25A;letter-spacing:.02em}.rhud .blitzt.hot{color:#FF6B7A;animation:blitzHot .5s ease-in-out infinite alternate}
+@keyframes blitzHot{to{transform:scale(1.12)}}
+.rhud .hearts{display:flex;gap:4px;flex:1}.rhud .hearts i{font-style:normal;font-size:20px;color:rgba(255,255,255,.15);transition:color .3s,transform .3s}.rhud .hearts i.on{color:#FF4D6D;text-shadow:0 0 10px rgba(255,77,109,.6)}
+#arena.lifelost{animation:lifeLost .5s}
+@keyframes lifeLost{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px #FF4D6D,0 0 40px rgba(255,77,109,.6)}}
+.mode-res{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-size:14px}
+.mode-res b{font-size:16px}
+.qs-card .qs-n{font:400 24px 'Lilita One',sans-serif;color:#FFD25A}
+.qs-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);cursor:pointer}
+.qs-row:first-of-type{border-top:0}
+.qs-row .ic{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:17px;background:rgba(255,255,255,.07)}
+.qs-row b{font-size:14px;display:block}
+.qs-bar{height:6px;border-radius:9px;background:rgba(255,255,255,.1);margin-top:5px;overflow:hidden}.qs-bar i{display:block;height:100%;background:#46E0A0;border-radius:9px}
+.qs-row.done{opacity:.6;cursor:default}.qs-row.qready{cursor:default}
+.qs-ok{font-size:12px;font-weight:900;color:#46E0A0;white-space:nowrap}.qs-p{font-size:12.5px;font-weight:900;color:#C9C2E6}
+.qs-chest{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;border-radius:14px;border:1px dashed rgba(185,166,255,.4);background:rgba(185,166,255,.06)}
+.qs-chest>span{font-size:24px}.qs-chest b{font-size:14px}
+.qs-chest.qready{border-style:solid;border-color:#FFD25A;background:rgba(255,210,90,.1);box-shadow:0 0 18px rgba(255,210,90,.2)}
+.qs-chest.open{border-style:solid;border-color:rgba(185,166,255,.6)}
+.dj-dex{display:flex;align-items:center;gap:12px;text-align:left;color:#fff;cursor:pointer;font-family:inherit}
+.dj-dex .ic{font-size:26px}.dj-dex b{display:block;font-size:16px}.dj-dex .num{font:400 22px 'Lilita One',sans-serif;color:#FFD25A}
+.dex-count{text-align:right}.dex-count b{display:block;font:400 30px 'Lilita One',sans-serif;color:#FFD25A;line-height:1}.dex-count small{font-size:16px;color:#C9C2E6}.dex-count span{font-size:11px;font-weight:900;color:#C9C2E6}
+.dex-frow{display:flex;gap:8px;overflow-x:auto;padding:8px 0 2px}
+.dfr{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#C9C2E6;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer}
+.dfr.on{border-color:#FFD25A;color:#fff}.dfr .ci-frame{width:30px;height:40px;border-width:3px;font-size:12px}
+.dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.dcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 8px 10px;border-radius:16px;border:2px solid color-mix(in srgb,var(--fc) 45%,transparent);background:radial-gradient(90% 60% at 50% 25%,color-mix(in srgb,var(--fc) 25%,transparent),rgba(255,255,255,.03));overflow:hidden;text-align:center;min-height:200px}
+.dcard.locked .dart{filter:brightness(0) opacity(.45)}.dcard.locked{border-style:dashed;opacity:.8}
+.dcard .dq{font:400 18px 'Lilita One',sans-serif;color:#5a537a}
+.dcard.open{border-color:var(--tc)}
+.dcard.open.framed{border:4px solid var(--f1);outline:2px solid var(--f2);outline-offset:-7px}
+.dcard .dname{font:400 16px 'Lilita One',sans-serif;color:#fff;line-height:1.1}
+.dcard .dtech{font-size:11px;color:#C9C2E6;font-weight:800;line-height:1.2}
+.dcard .dmeta{display:flex;gap:6px;align-items:center;margin-top:2px;font-size:11px;font-weight:900}
+.dcard .dtier{padding:1px 7px;border-radius:99px;border:1px solid var(--tc);color:#fff}
+.dcard .dcode{font-size:10.5px;font-weight:900;letter-spacing:.06em;color:#8E86B0;margin-top:auto}
+.dcard .star{position:absolute;top:6px;right:9px;color:#FFD25A;font-size:16px;text-shadow:0 0 10px rgba(255,210,90,.8);z-index:2}
+.dcard .shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.28) 45%,rgba(255,215,90,.18) 52%,transparent 65%);background-size:250% 100%;animation:dexShine 3.2s linear infinite;pointer-events:none;z-index:1}
+@keyframes dexShine{from{background-position:120% 0}to{background-position:-120% 0}}
+@media (prefers-reduced-motion:reduce){.dcard .shine,.rc-chest{animation:none}}
+.qs-row .grow{flex:1;min-width:0}.qs-row .nd-btn{flex:none;white-space:nowrap}
