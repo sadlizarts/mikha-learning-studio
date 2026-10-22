@@ -16,6 +16,7 @@ import { renderSchedule } from './features/schedule.js';
 import { renderDojo } from './features/dojo.js';
 import { renderHero } from './features/hero.js';
 import { renderBosses } from './features/bosses.js';
+import { renderIntel } from './features/intel.js';
 
 window.MLS = { app };
 
@@ -53,6 +54,7 @@ async function boot() {
   route('dojo', renderDojo);
   route('hero', renderHero);
   route('bosses', renderBosses);
+  route('intel', renderIntel);
 
   startRouter();
   if (redirect?.startsWith('error:')) toast(`That reset link did not work (${redirect.slice(6)}). Ask for a new one.`, 6000);

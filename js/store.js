@@ -568,6 +568,19 @@ export async function reportCards(userId) {
   return run(sb.from('report_cards').select('id, academic_year, semester, term_key, title, class_name, report_date, absence, report_scores(subject_label, subject_id, score, comment, sort_order)')
     .eq('student_id', userId).eq('is_active', true).order('report_date', { ascending: false }));
 }
+/* v3.0 Boss Intel: lessons read as cards charge a chapter's Intel (max 3); the next battle on it uses the charge. */
+export async function intelCharges(userId) {
+  const rows = await run(sb.from('intel_charges').select('chapter_id, level').eq('user_id', userId).is('used_attempt', null));
+  return Object.fromEntries((rows || []).map(r => [r.chapter_id, r.level]));
+}
+export async function readIntelCard(chapterId, card, total, correct) {
+  return run(sb.rpc('read_intel_card', { p_chapter: chapterId, p_card: card, p_total: total, p_correct: correct }));
+}
+/** Questions of one chapter that work as a 1-tap check (no picture, no passage). */
+export async function checkQuestions(chapterId) {
+  return run(sb.from('questions').select('id, stem, options, answer_key, explanation, lesson_anchor, is_quick_check')
+    .eq('chapter_id', chapterId).eq('is_active', true).is('image_path', null).is('context_id', null).limit(300));
+}
 export async function loadAssessments({ all = false } = {}) {
   let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, subjects(name)').order('date_start').order('subject_id');
   if (!all) q = q.eq('is_active', true);
