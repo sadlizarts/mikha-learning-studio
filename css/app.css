@@ -1082,3 +1082,15 @@ html.nd-on .sheet .btn.danger{background:linear-gradient(135deg,#FF5A6E,#FF8A6E)
 .adb-meta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:11.5px;font-weight:800;color:#C9C2E6}.adb-meta b{color:#fff}
 .nd .bcard .stamp{top:9px;bottom:auto;right:6px;left:auto;max-width:calc(100% - 52px);font-size:9px;padding:2px 7px;min-height:0;white-space:nowrap;overflow:hidden}.nd .bcard .stamp .dot{width:6px;height:6px}
 .nd .targets::-webkit-scrollbar{display:none}.nd .targets{scrollbar-width:none}
+/* ---- v2.8 method hints ---- */
+.screen.nd .hintbox{background:rgba(155,133,255,.1);border:1px solid rgba(185,166,255,.5);border-radius:16px;color:#fff}
+.hintbox.howto{white-space:normal;display:flex;flex-direction:column;gap:10px}
+.hintbox.howto b{display:block;font-size:10.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#B9A6FF;margin-bottom:2px}
+.hw-idea{font-size:15px;line-height:1.4}
+.hw-card{background:rgba(0,0,0,.25);border-radius:12px;padding:10px 12px;border-left:3px solid #FFD25A}
+.hw-title{font-family:var(--display);font-size:16px;color:#FFD25A;margin-bottom:6px}
+.hw-card ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:14.5px;line-height:1.35}
+.hw-card li::marker{color:#FFD25A;font-weight:900}
+.hw-apply{font-size:14.5px;line-height:1.45;background:rgba(70,224,160,.08);border:1px dashed rgba(70,224,160,.5);border-radius:12px;padding:9px 12px}
+.hw-apply b{color:#46E0A0!important}
+.screen.nd .hintbox .tag{display:block;border:0;background:none;padding:0;margin:0 0 2px;color:#B9A6FF;font-size:11px;letter-spacing:.1em;text-transform:uppercase;white-space:normal}
