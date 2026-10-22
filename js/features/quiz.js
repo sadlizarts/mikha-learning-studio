@@ -158,11 +158,22 @@ function renderQ() {
   $('#qscroll').scrollTop = 0;
 }
 
+/** v2.8 method hints: "Idea: …\nHow to …:\n1. …\n2. …\nFor this question: …" → idea, method card, apply box. Plain hints return null. */
+function methodHint(h) {
+  const m = String(h || '').match(/^Idea:\s*([\s\S]*?)\n(How to[^\n]*?):?\s*\n([\s\S]*?)\nFor this question:\s*([\s\S]*)$/);
+  if (!m) return null;
+  const steps = m[3].split('\n').map(x => x.trim()).filter(Boolean).map(x => x.replace(/^\d+[.)]\s*/, ''));
+  return `<div class="hw-idea"><b>Idea</b>${rich(m[1].trim())}</div>
+    <div class="hw-card"><div class="hw-title">${rich(m[2].trim())}</div><ol>${steps.map(x => `<li>${rich(x)}</li>`).join('')}</ol></div>
+    <div class="hw-apply"><b>For this question</b>${rich(m[4].trim())}</div>`;
+}
+
 function showHint() {
   const q = qAt(); const hints = (q.hints || []).filter(Boolean);
   if (S.locked || S.hint >= hints.length) return;
-  const tag = hints.length === 1 ? 'Hint · Remember' : S.hint === 0 ? 'Hint 1 · Remember' : 'Hint 2 · Next step';
-  $('#hints').insertAdjacentHTML('beforeend', `<div class="hintbox"><span class="tag">${tag}</span><div>${rich(hints[S.hint])}</div></div>`);
+  const h = hints[S.hint], how = methodHint(h);
+  const tag = how ? 'How to solve it' : hints.length === 1 ? 'Hint · Remember' : S.hint === 0 ? 'Hint 1 · Remember' : 'Hint 2 · Next step';
+  $('#hints').insertAdjacentHTML('beforeend', `<div class="hintbox${how ? ' howto' : ''}"><span class="tag">${tag}</span>${how || `<div>${rich(h)}</div>`}</div>`);
   S.hint++;
   const hb = $('#hintbtn');
   if (S.hint >= hints.length) hb.hidden = true; else hb.innerHTML = `${BULB} Another hint`;
