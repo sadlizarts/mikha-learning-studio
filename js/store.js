@@ -581,6 +581,18 @@ export async function checkQuestions(chapterId) {
   return run(sb.from('questions').select('id, stem, options, answer_key, explanation, lesson_anchor, is_quick_check')
     .eq('chapter_id', chapterId).eq('is_active', true).is('image_path', null).is('context_id', null).limit(300));
 }
+/* v3.1 rounds + cosmetic chests */
+export async function claimRound(attemptId, round) { return run(sb.rpc('claim_round', { p_attempt: attemptId, p_round: round })); }
+export async function redeemShards(key) { return run(sb.rpc('redeem_shards', { p_item: key })); }
+/** { items: catalog[], owned: Set(keys), shards } for one user. */
+export async function cosmetics(userId) {
+  const [items, owned, prog] = await Promise.all([
+    run(sb.from('cosmetic_items').select('key, kind, name, rarity, data, sort').eq('is_active', true).order('sort')),
+    run(sb.from('user_cosmetics').select('item_key, source, obtained_at').eq('user_id', userId)),
+    run(sb.from('user_progress').select('shards').eq('user_id', userId)).catch(() => []),
+  ]);
+  return { items: items || [], owned: new Set((owned || []).map(o => o.item_key)), shards: prog?.[0]?.shards || 0 };
+}
 export async function loadAssessments({ all = false } = {}) {
   let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, subjects(name)').order('date_start').order('subject_id');
   if (!all) q = q.eq('is_active', true);
