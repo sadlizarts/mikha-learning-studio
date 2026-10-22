@@ -593,6 +593,11 @@ export async function cosmetics(userId) {
   ]);
   return { items: items || [], owned: new Set((owned || []).map(o => o.item_key)), shards: prog?.[0]?.shards || 0 };
 }
+/* v3.2 battle modes + daily quests */
+export async function startMode(mode, chapterIds) { return run(sb.rpc('start_mode', { p_mode: mode, p_chapter_ids: chapterIds || null })); }
+export async function revengeCount() { return run(sb.rpc('revenge_count')); }
+export async function myQuests() { return run(sb.rpc('my_quests')); }
+export async function claimQuest(slot) { return run(sb.rpc('claim_quest', { p_slot: slot })); }
 export async function loadAssessments({ all = false } = {}) {
   let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, subjects(name)').order('date_start').order('subject_id');
   if (!all) q = q.eq('is_active', true);
