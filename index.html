@@ -87,6 +87,13 @@
     <div class="scroll no-tab" id="qscroll">
       <div class="stack" id="qstack">
         <div class="exambanner" id="exambanner" hidden></div>
+        <div class="arena" id="arena" hidden aria-hidden="true">
+          <span class="ar-kanji">斬</span>
+          <div class="ar-mon" id="armon"></div>
+          <div class="ar-fx" id="arfx"></div>
+          <div class="ar-combo" id="arcombo" hidden></div>
+          <div class="ar-hp"><div class="row between"><span id="arname"></span><span class="num" id="arhpt"></span></div><div class="hp"><i id="arhp"></i></div></div>
+        </div>
         <div class="row" style="gap:8px"><span class="chip" id="qchip"><span class="dot"></span><span class="txt"></span></span></div>
         <div class="panel sunk ctx" id="ctx" hidden></div>
         <div class="panel qcard">
@@ -97,7 +104,7 @@
         <button class="hintbtn" id="hintbtn" hidden></button>
         <div id="hints" class="stack" style="gap:8px"></div>
         <div id="feedback" class="stack" hidden aria-live="polite">
-          <div class="verdict"><div class="mascot" id="m-quiz"></div><div class="impact" id="impact"></div></div>
+          <div class="verdict"><div class="mk-ava" id="mk-quiz" aria-hidden="true"></div><div class="mk-say"><div class="impact" id="impact"></div><div class="mk-line" id="mkline"></div></div></div>
           <div class="panel explain" id="explain"><div class="eyebrow" id="explain-h">Why</div><p id="exptext"></p><button class="readlink" id="readlink" hidden></button></div>
           <div class="syncnote" id="syncnote" hidden>Saved on this device — it will sync when you're back online.</div>
           <button class="btn primary lg block" id="nextbtn">Next →</button>
