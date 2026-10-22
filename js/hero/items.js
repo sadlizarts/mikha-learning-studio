@@ -49,10 +49,10 @@ export function catalog() {
     { key: 'a-amulet', slot: 'accessory', name: 'Sky Amulet', rule: lvl(8, 'silver') },
     { key: 'u-jade', slot: 'aura', name: AURAS['u-jade'].name, rule: bossN(10, 'silver') },
     { key: 'r-sealbreaker', slot: 'armor', name: 'Sealbreaker Plate', rule: (c) => ({ owned: c.examsPassed >= 1, rarity: 'epic', hint: 'Pass a rank exam' }) },
-    { key: 'u-violet', slot: 'aura', name: AURAS['u-violet'].name, rule: rankN(3, 'gold', 'Warden') },
-    { key: 'u-ember', slot: 'aura', name: AURAS['u-ember'].name, rule: rankN(5, 'epic', 'Sentinel') },
-    { key: 'u-sun', slot: 'aura', name: AURAS['u-sun'].name, rule: rankN(7, 'legendary', 'Grandmaster') },
-    { key: 'w-grand-katana', slot: 'weapon', name: 'Grandmaster Katana', rule: rankN(7, 'legendary', 'Grandmaster') },
+    { key: 'u-violet', slot: 'aura', name: AURAS['u-violet'].name, rule: rankN(3, 'gold', 'Seeker') },
+    { key: 'u-ember', slot: 'aura', name: AURAS['u-ember'].name, rule: rankN(5, 'epic', 'Elite') },
+    { key: 'u-sun', slot: 'aura', name: AURAS['u-sun'].name, rule: rankN(7, 'legendary', 'Legendary') },
+    { key: 'w-grand-katana', slot: 'weapon', name: 'Legendary Katana', rule: rankN(7, 'legendary', 'Legendary') },
   ];
   for (const [sub, it] of Object.entries(SUBJECT_ITEM)) {
     list.push({ ...it, subject: sub, rule: (c) => {
