@@ -1065,3 +1065,20 @@ html.nd-on .sheet .btn.danger{background:linear-gradient(135deg,#FF5A6E,#FF8A6E)
 .screen.nd.admin .kpi > div{border:1px solid rgba(255,255,255,.08);background:#17132C;border-radius:14px}
 .screen.nd.admin input,.screen.nd.admin select,.screen.nd.admin textarea{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:10px}
 .screen.nd.admin select option{background:#17132C;color:#fff}
+
+/* ---- v2.7.1 layout fixes (no overlap on phones) ---- */
+.screen.admin .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.screen.admin .tbl td,.screen.admin .tbl th{white-space:nowrap}
+.screen.admin .tbl td:first-child{white-space:normal;min-width:150px}
+.adb-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.adb-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.adb-mon{flex:none;width:46px;height:46px;display:grid;place-items:center}
+.adb-main{flex:1;min-width:0}
+.adb-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.adb-top b{font-size:14px;color:#fff;line-height:1.25;min-width:0;overflow-wrap:anywhere}
+.adb-top .chip{flex:none;font-size:12px;min-height:24px}
+.adb-sub{font-size:12px;font-weight:700;color:#A9A1C9;margin-top:2px}
+.adb-hp{display:flex;align-items:center;gap:8px;margin-top:7px}.adb-hp .hp{flex:1}.adb-hp span{font-size:11.5px;font-weight:900;color:#FF9A9A;flex:none}
+.adb-meta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:11.5px;font-weight:800;color:#C9C2E6}.adb-meta b{color:#fff}
+.nd .bcard .stamp{top:9px;bottom:auto;right:6px;left:auto;max-width:calc(100% - 52px);font-size:9px;padding:2px 7px;min-height:0;white-space:nowrap;overflow:hidden}.nd .bcard .stamp .dot{width:6px;height:6px}
+.nd .targets::-webkit-scrollbar{display:none}.nd .targets{scrollbar-width:none}
