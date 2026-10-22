@@ -22,7 +22,17 @@ export const AURAS = {
   'u-violet': { color: 0xA77BFF, name: 'Violet Seal' },
   'u-ember': { color: 0xFF7A3D, name: 'Ember Crown' },
   'u-sun': { color: 0xFFD233, name: 'Dawn Sun' },
+  // v3.1 chest auras (same keys/colours as public.cosmetic_items)
+  'u-c-neon': { color: 0x22E5FF, name: 'Neon Cyan', chest: 'common' },
+  'u-c-rose': { color: 0xFF7EB6, name: 'Rose Quartz', chest: 'common' },
+  'u-c-mint': { color: 0x7DFFB2, name: 'Mint Breeze', chest: 'common' },
+  'u-c-bloodmoon': { color: 0xE0303A, name: 'Blood Moon', chest: 'rare' },
+  'u-c-storm': { color: 0x5B6CFF, name: 'Storm Indigo', chest: 'rare' },
+  'u-c-gold': { color: 0xFFC83D, name: 'Royal Gold', chest: 'rare' },
+  'u-c-void': { color: 0x9B30FF, name: 'Void Flame', chest: 'epic' },
+  'u-c-aurora': { color: 0x00FFC6, name: 'Aurora Spirit', chest: 'epic' },
 };
+const CHEST_RARITY = { common: 'silver', rare: 'gold', epic: 'epic' };
 
 // subject key -> item that grows with sealed bosses of that subject
 const SUBJECT_ITEM = {
@@ -54,6 +64,8 @@ export function catalog() {
     { key: 'u-sun', slot: 'aura', name: AURAS['u-sun'].name, rule: rankN(7, 'legendary', 'Legendary') },
     { key: 'w-grand-katana', slot: 'weapon', name: 'Legendary Katana', rule: rankN(7, 'legendary', 'Legendary') },
   ];
+  for (const [key, a] of Object.entries(AURAS)) if (a.chest)
+    list.push({ key, slot: 'aura', name: a.name, chest: true, rule: (c) => ({ owned: !!c.cosmetics?.has(key), rarity: CHEST_RARITY[a.chest], hint: 'Found in round chests' }) });
   for (const [sub, it] of Object.entries(SUBJECT_ITEM)) {
     list.push({ ...it, subject: sub, rule: (c) => {
       const s = c.bySubject[sub] || { sealed: 0, total: 0 };
