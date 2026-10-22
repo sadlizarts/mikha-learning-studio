@@ -459,6 +459,7 @@ export const admin = {
     const rows = await run(sb.from('user_progress').select('xp_total, current_streak, best_streak, last_completed_date').eq('user_id', studentId).limit(1));
     return rows[0] || { xp_total: 0, current_streak: 0, best_streak: 0, last_completed_date: null };
   },
+  async dailyActivity(studentId, days = 14) { return run(sb.rpc('daily_activity', { p_user: studentId, p_days: days })); },
   async studentChapterStats(studentId) {
     return run(sb.from('v_chapter_stats').select('chapter_id, answered, accuracy_all, accuracy_recent, hint_rate_recent, last_practiced_at').eq('user_id', studentId));
   },
