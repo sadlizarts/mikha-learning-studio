@@ -563,6 +563,11 @@ export const admin = {
 };
 
 /* school assessment calendar (EASE sheet). Students see active rows; admin can ask for all. */
+/** v2.9 school report cards (newest first), each with its subject scores. RLS: the student sees their own, Dad sees all. */
+export async function reportCards(userId) {
+  return run(sb.from('report_cards').select('id, academic_year, semester, term_key, title, class_name, report_date, absence, report_scores(subject_label, subject_id, score, comment, sort_order)')
+    .eq('student_id', userId).eq('is_active', true).order('report_date', { ascending: false }));
+}
 export async function loadAssessments({ all = false } = {}) {
   let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, subjects(name)').order('date_start').order('subject_id');
   if (!all) q = q.eq('is_active', true);
