@@ -6,12 +6,12 @@ import { monsterSVG } from './monsters.js';
 export const RANKS = [
   { name: 'Initiate',    belt: 'White belt',  color: '#F4F1EA' },
   { name: 'Apprentice',  belt: 'Yellow belt', color: '#FFD233' },
-  { name: 'Adept',       belt: 'Orange belt', color: '#FF8A1F' },
-  { name: 'Warden',      belt: 'Green belt',  color: '#1FA463' },
-  { name: 'Hunter',      belt: 'Blue belt',   color: '#2F6FE0' },
-  { name: 'Sentinel',    belt: 'Purple belt', color: '#7A4BE0' },
-  { name: 'Champion',    belt: 'Brown belt',  color: '#8A5A2B' },
-  { name: 'Grandmaster', belt: 'Black belt',  color: '#1B1826' },
+  { name: 'Disciple',    belt: 'Orange belt', color: '#FF8A1F' },
+  { name: 'Seeker',      belt: 'Green belt',  color: '#1FA463' },
+  { name: 'Adept',       belt: 'Blue belt',   color: '#2F6FE0' },
+  { name: 'Elite',       belt: 'Purple belt', color: '#7A4BE0' },
+  { name: 'Master',      belt: 'Brown belt',  color: '#8A5A2B' },
+  { name: 'Legendary',   belt: 'Black belt',  color: '#1B1826' },
 ];
 
 export function rules(cat) {
