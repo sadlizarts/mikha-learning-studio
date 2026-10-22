@@ -131,6 +131,9 @@ export async function loadDojo(userId) {
 /** v2.5.0 Retreat rules (server applies the XP cost in abandon_attempt / abandon_stale_attempts). */
 export async function retreatPreview() { return run(sb.rpc('retreat_preview')); }
 export async function myRetreats(userId) { return run(sb.rpc('my_retreats', { p_user: userId || null })); }
+export async function retreatLog(userId, limit = 100) {
+  return run(sb.from('retreats').select('attempt_id, chapter_ids, nth, xp_lost, auto, rank_before, rank_after, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(limit));
+}
 export async function markRetreatsSeen() { try { await run(sb.rpc('mark_retreats_seen')); } catch { /* best effort */ } }
 export async function startRankExam() {
   const data = await run(sb.rpc('start_rank_exam'));
