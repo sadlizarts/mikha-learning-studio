@@ -1,7 +1,8 @@
 // Practice screen (DESIGN §5.4, PRD §7.4, §7.8, FR-22..FR-26).
 // Feedback is shown instantly from the answer_key the client already has; the server grades again in answer_question.
 import { rich, $, $$, esc, subjectMeta, shortCode, sheet, toast, pick, BULB, reducedMotion } from '../ui.js';
-import { getAttempt, cachedAttempt, saveAnswer, completeAttempt, imageUrl, flushAnswers, loadProgress } from '../store.js';
+import { getAttempt, cachedAttempt, saveAnswer, completeAttempt, imageUrl, flushAnswers, loadProgress, claimRound } from '../store.js';
+import { sfx, muted, setMuted } from '../sfx.js';
 import { catalog, chapterIndex } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
 import { lessonsMeta, hasAnchor, openLessonSheet } from './learn.js';
@@ -60,8 +61,9 @@ function strike(ok, q, counter = false) {
   $('#arhp').style.width = hp + '%'; $('#arhpt').textContent = `HP ${hp}%`;
   const fx = $('#arfx'), mon = $('#armon .mon-wrap');
   if (ok) {
-    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}${weakOn(foe.key) ? ' ×2!' : ''}</b>${hp === 0 ? '<b class="ar-ko">SEALED!</b>' : counter ? '<span class="ar-crit ar-counter">COUNTER STRIKE +5 XP</span>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
+    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}${weakOn(foe.key) ? ' ×2!' : ''}</b>${hp === 0 && before > 0 ? '<b class="ar-ko">SEALED!</b>' : counter ? '<span class="ar-crit ar-counter">COUNTER STRIKE +5 XP</span>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
     if (mon) { mon.classList.remove('hit'); void mon.offsetWidth; mon.classList.add('hit'); }
+    if (hp === 0 && before > 0) setTimeout(() => sfx.seal(), 120);
   } else {
     fx.innerHTML = '<i class="ar-claw"></i>';
     ar.classList.remove('counter'); void ar.offsetWidth; ar.classList.add('counter');
@@ -72,7 +74,79 @@ function strike(ok, q, counter = false) {
   if (S.combo >= 2) { c.textContent = `×${S.combo} combo`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } else c.hidden = true;
 }
 
-let S = null; // { data, qs, i, hint, t0, combo, idx, locked, intel, shield }
+let S = null; // { data, qs, i, hint, t0, combo, idx, locked, intel, shield, rounds, claimed, chests }
+
+/* ---- v3.1 rounds of 10: stars + a cosmetic chest after each round (server rolls it) ---- */
+const roundOf = (i) => Math.floor(i / 10);
+const roundQs = (r) => S.qs.slice(r * 10, r * 10 + 10);
+function pendingRound() {
+  if (!S?.rounds) return null;
+  for (let r = 0; r < S.rounds; r++) if (!S.claimed.has(r) && roundQs(r).every(q => q.answer)) return r;
+  return null;
+}
+function drawRounds() {
+  const el = $('#rhud'); if (!el) return;
+  if (!S?.rounds) { el.hidden = true; return; }
+  const cur = Math.min(S.rounds - 1, roundOf(S.i));
+  el.innerHTML = `<span class="nd-label">Round ${cur + 1} of ${S.rounds}</span><span class="rsegs">${Array.from({ length: S.rounds }, (_, r) => {
+    const qs = roundQs(r), n = qs.filter(q => q.answer).length;
+    return `<i class="${n === qs.length ? 'done' : r === cur ? 'cur' : ''}" style="--p:${Math.round(100 * n / qs.length)}%"></i>`; }).join('')}</span>`;
+  el.hidden = false;
+}
+const RAR = { common: { n: 'Common', c: '#B8C2D0' }, rare: { n: 'Rare', c: '#3987e5' }, epic: { n: 'Epic', c: '#B9A6FF' } };
+const KIND = { aura: 'Hero aura', title: 'Title', frame: 'Card frame' };
+function itemPreview(it) {
+  if (!it) return '';
+  if (it.kind === 'aura') return `<span class="ci-aura" style="--ac:${esc(it.data?.color || '#fff')}"></span>`;
+  if (it.kind === 'frame') return `<span class="ci-frame" style="--c1:${esc(it.data?.c1 || '#fff')};--c2:${esc(it.data?.c2 || '#333')}">?</span>`;
+  return `<span class="ci-title">“${esc(it.name)}”</span>`;
+}
+async function showRound(r) {
+  let res = null;
+  try { res = await claimRound(S.data.attempt.id, r); } catch (e) { toast(e.code === 'network' ? 'Offline: the chest will wait for you.' : e.message, 2600); }
+  S.claimed.add(r);
+  if (!res || res.already) return;
+  if (res.item) S.chests.push({ round: r, rarity: res.rarity, item: res.item, duplicate: res.duplicate });
+  const last = r === S.rounds - 1, rar = RAR[res.rarity] || RAR.common;
+  sfx.round(res.stars);
+  await new Promise(resolve => {
+    const w = document.createElement('div');
+    w.className = 'rclear nd'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', `Round ${r + 1} clear`);
+    w.innerHTML = `<div class="rc-in">
+      <div class="nd-label">Round ${r + 1} of ${S.rounds}</div>
+      <div class="rc-t">ROUND CLEAR!</div>
+      <div class="rc-stars">${[0, 1, 2].map(i => `<i class="${i < res.stars ? 'on' : ''}" style="--d:${0.25 + i * 0.22}s">★</i>`).join('')}</div>
+      <div class="rc-sub num">${res.correct} / ${res.size} correct${res.xp ? ` · <b>+${res.xp} XP</b> round bonus` : ''}</div>
+      ${res.preview ? '<p class="nd-sub">Dad preview: no chest.</p>' : `
+      <button class="rc-chest r-${res.rarity}" id="rc-chest" style="--rc:${rar.c}" aria-label="Open the ${rar.n} chest"><span class="lid"></span><span class="box"></span><span class="lock"></span></button>
+      <div class="rc-rar" style="color:${rar.c}">${rar.n} chest · tap to open</div>
+      <div class="rc-item" id="rc-item" hidden></div>
+      <div class="rc-odds"><span>0–1★ Common 80 · Rare 18 · Epic 2</span><span>2★ 60 · 32 · 8</span><span>3★ Epic</span></div>`}
+      <button class="nd-btn primary block lg" id="rc-go" ${res.preview ? '' : 'disabled'}>${last ? 'See results →' : `⚔️ Round ${r + 2} →`}</button>
+    </div>`;
+    $('#app').appendChild(w);
+    res.stars && [0, 1, 2].slice(0, res.stars).forEach(i => setTimeout(() => sfx.star(i), 300 + i * 220));
+    const go = w.querySelector('#rc-go');
+    go.onclick = () => { w.remove(); resolve(); };
+    const ch = w.querySelector('#rc-chest');
+    if (ch) ch.onclick = () => {
+      if (ch.classList.contains('open')) return;
+      ch.classList.add('open'); sfx.chest(res.rarity);
+      const it = res.item, box = w.querySelector('#rc-item');
+      setTimeout(() => {
+        box.innerHTML = `${itemPreview(it)}<div><div class="nd-label" style="color:${rar.c}">${rar.n} · ${KIND[it?.kind] || ''}</div><b>${esc(it?.name || '')}</b>
+          <span class="nd-sub">${res.duplicate ? `Already yours → +1 shard (${res.shards}/10)` : it?.kind === 'title' ? 'New title! Equip it in Dojo → Hero.' : it?.kind === 'aura' ? 'New aura! Equip it in Dojo → Hero.' : 'New frame for your Monster Dex.'}</span></div>`;
+        box.hidden = false; w.querySelector('.rc-rar').textContent = res.duplicate ? 'Duplicate' : 'NEW!';
+        go.disabled = false;
+      }, 650);
+    };
+  });
+}
+function drawMute() {
+  const b = $('#mutebtn'); if (!b) return;
+  b.textContent = muted() ? '🔇' : '🔊'; b.setAttribute('aria-label', muted() ? 'Sound off' : 'Sound on');
+  b.onclick = () => { setMuted(!muted()); drawMute(); if (!muted()) sfx.tap(); };
+}
 
 function drawBuffs() {
   const el = $('#buffs'), lv = Math.max(0, ...Object.values(S?.intel || {}));
@@ -109,6 +183,9 @@ export async function renderQuiz(id) {
   loadProgress().then(p => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(p?.rank || 0)})`; }).catch(() => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(0)})`; });
   const mine = S;
   lessonsMeta().then(x => { mine.lidx = x; }).catch(() => { /* Read links just stay hidden */ });
+  S.rounds = !data.attempt.exam_rank && S.qs.length >= 10 ? Math.ceil(S.qs.length / 10) : 0;   // v3.1: rounds of 10
+  S.claimed = new Set(); S.chests = [];
+  drawMute();
   const open = firstOpen();
   if (open === -1) { finish(); return; }
   S.i = open;
@@ -143,6 +220,7 @@ function renderQ() {
   S.hint = 0; S.locked = false; S.t0 = performance.now();
   const n = S.qs.length, done = S.qs.filter(x => x.answer).length;
   if (done) $('#benchline').hidden = true;
+  drawRounds();
   $('#qcount').textContent = `${S.i + 1} / ${n}`;
   $('#progbar').style.width = (done / n * 100) + '%';
   $('#progwrap').setAttribute('aria-valuenow', done);
@@ -239,6 +317,8 @@ async function choose(orig) {
   $('#mkline').textContent = shielded ? '🛡️ Shield blocked it! Your combo is safe.' : counter ? 'Counter strike! +5 XP for bouncing back.' : ok ? pick(OK_LINES) : pick(BAD_LINES);
   if (shielded) { imp.textContent = 'SHIELD!'; imp.className = 'impact shield'; }
   try { strike(ok, q, counter); } catch { /* battle is decoration */ }
+  if (shielded) sfx.shield(); else if (!ok) sfx.miss(); else if (S.combo >= 5 && S.combo % 5 === 0) sfx.crit(); else sfx.hit(S.combo);
+  drawRounds();
   $('#explain').className = 'panel explain' + (ok ? '' : ' bad');
   $('#explain-h').textContent = ok ? "Why it's right" : 'What to remember';
   $('#exptext').innerHTML = rich(q.explanation || '');
@@ -253,7 +333,7 @@ async function choose(orig) {
   if (S.combo >= 3 && $('#arena').hidden) { c.textContent = `🔥 ${S.combo} in a row!`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
   if (ok && S.combo >= 5 && S.combo % 5 === 0) surge(S.combo);
   const last = firstOpen() === -1;
-  $('#nextbtn').textContent = last ? 'See results →' : 'Next →';
+  $('#nextbtn').textContent = pendingRound() !== null ? '🏁 Round clear! →' : last ? 'See results →' : 'Next →';
   $('#feedback').hidden = false;
   setTimeout(() => $('#nextbtn').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'end' }), $('#arena').hidden || reducedMotion() ? 80 : 700);   // let the strike play first
 
@@ -271,18 +351,21 @@ function surge(n) {
 }
 
 async function next() {
+  const pr = pendingRound();
+  if (pr !== null) { await showRound(pr); if (pendingRound() !== null) return; }
   const open = firstOpen();
   if (open !== -1) { S.i = open; renderQ(); return; }
   finish();
 }
 
 async function finish() {
+  for (let pr = pendingRound(), guard = 0; pr !== null && guard < 6; pr = pendingRound(), guard++) await showRound(pr);
   const btn = $('#nextbtn');
   btn.disabled = true; btn.textContent = 'Scoring…';
   const id = S.data.attempt.id;
   try {
     const res = await completeAttempt(id);
-    try { sessionStorage.setItem('mls_done_' + id, JSON.stringify(res)); } catch { /* ignore */ }
+    try { sessionStorage.setItem('mls_done_' + id, JSON.stringify({ ...res, chests: S.chests })); } catch { /* ignore */ }
     navigate(`#/result/${id}`, { replace: true });
   } catch (e) {
     toast(e.code === 'network' ? "Can't reach the server. Your answers are safe — tap again when you're online." : e.message, 3500);

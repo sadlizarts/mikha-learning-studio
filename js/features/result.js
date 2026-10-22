@@ -103,8 +103,9 @@ export async function renderResult(id, { fresh }) {
       <div><div class="v num">${fmtDur(a.duration_s)}</div><div class="l">Time</div></div>
       <div><div class="v num">${hintsUsed}</div><div class="l">Hints used</div></div>
     </div>
-    <div class="xpgain"><span aria-hidden="true" style="font-size:22px">⚡</span><div class="grow">XP earned${done?.counters || done?.intel_xp ? `<div style="font-size:12px;font-weight:800;opacity:.8">incl. ${[done.counters ? `${done.counters} counter strike${done.counters === 1 ? '' : 's'} (+${done.counters * 5})` : '', done.intel_xp ? `✨ Intel bonus (+${done.intel_xp})` : ''].filter(Boolean).join(' · ')}</div>` : ''}</div><b class="num">+${xp}</b></div>
+    <div class="xpgain"><span aria-hidden="true" style="font-size:22px">⚡</span><div class="grow">XP earned${done?.counters || done?.intel_xp || done?.round_xp ? `<div style="font-size:12px;font-weight:800;opacity:.8">incl. ${[done.counters ? `${done.counters} counter strike${done.counters === 1 ? '' : 's'} (+${done.counters * 5})` : '', done.intel_xp ? `✨ Intel bonus (+${done.intel_xp})` : '', done.round_xp ? `⭐ round stars (+${done.round_xp})` : ''].filter(Boolean).join(' · ')}</div>` : ''}</div><b class="num">+${xp}</b></div>
     ${levelUp}
+    ${done?.chests?.length ? `<div class="panel rs-chests"><div class="eyebrow" style="margin-bottom:8px">Chest loot this session</div>${done.chests.map(c => `<div class="rs-ch r-${esc(c.rarity)}"><span class="rr">${esc(c.rarity)}</span><b>${esc(c.item?.name || '')}</b><span class="note">${c.duplicate ? '+1 shard' : esc({ aura: 'Aura', title: 'Title', frame: 'Frame' }[c.item?.kind] || '')}</span></div>`).join('')}<button class="btn small block" data-nav="#/hero" style="margin-top:8px">Equip in Hero →</button></div>` : ''}
     ${examHtml}${notes}
     <div id="bossreport"></div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:10px">Battles this session</div><div class="stack" style="gap:12px">${chapRows}</div></div>

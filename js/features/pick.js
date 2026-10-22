@@ -60,7 +60,7 @@ function updateMeta() {
   const b = $('#startbtn');
   const count = Math.min(len, t);
   b.disabled = n === 0 || t < 10 || busy;
-  b.textContent = busy ? 'Getting questions…' : n === 0 ? 'Pick at least one chapter' : t < 10 ? 'Not enough questions yet' : `Start ${count} questions →`;
+  b.textContent = busy ? 'Getting questions…' : n === 0 ? 'Pick at least one chapter' : t < 10 ? 'Not enough questions yet' : `Start · ${Math.ceil(count / 10)} rounds of 10 →`;
   const w = $('#pickwarn');
   w.hidden = !(n > 0 && t >= 10 && t < len);
   if (!w.hidden) w.textContent = `Only ${t} questions in these chapters, so this practice will have ${t}.`;

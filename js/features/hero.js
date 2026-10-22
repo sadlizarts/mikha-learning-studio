@@ -1,7 +1,8 @@
 // Hero profile (v2.0.0 Night Dojo): cinematic stage + tabs (Gear, Loot gallery, Mastery paths, Evolution). Logic as v1.9.
 // One persistent original character; its look comes from Dojo rank (stage) + equipped items. Never regenerated at runtime.
 import { $, $$, esc, toast, fmtNum, shortCode } from '../ui.js';
-import { loadHero, saveHero, heroAssets } from '../store.js';
+import { loadHero, saveHero, heroAssets, cosmetics, redeemShards } from '../store.js';
+import { sheet } from '../ui.js';
 import { app, firstName } from '../state.js';
 import { show, navigate, currentRoute } from '../router.js';
 import { dojoData } from './dojo.js';
@@ -47,16 +48,19 @@ export async function renderHero() {
   const body = $('#hero-body');
   if (!body.dataset.ready) body.innerHTML = '<div class="loading" style="height:60vh"><div class="spin"></div></div>';
   stageObj?.destroy(); stageObj = null;
-  let d, hp, assets = [];
+  let d, hp, assets = [], cos = { items: [], owned: new Set(), shards: 0 };
   const viewing = !!app.viewAs;
   try {
     const vid = app.viewAs?.id || app.user.id;
-    [d, hp, assets] = await Promise.all([dojoData(true), loadHero(vid), heroAssets().catch(() => [])]);
+    [d, hp, assets, cos] = await Promise.all([dojoData(true), loadHero(vid), heroAssets().catch(() => []), cosmetics(vid).catch(() => cos)]);
   } catch (e) { body.innerHTML = `<div class="nd-card">${esc(e.message)}</div>`; return; }
-  const ctx = heroContext(d), inv = inventory(ctx);
+  const ctx = heroContext(d); ctx.cosmetics = cos.owned;
+  const inv = inventory(ctx);
   const stage = d.rk.rank;
   const equipped = validEquip(hp.equipped, inv, ctx);
-  S = { d, ctx, inv, stage, equipped, assets, hp, viewing };
+  for (const k of ['title', 'frame']) if (hp.equipped?.[k] && cos.owned.has(hp.equipped[k])) equipped[k] = hp.equipped[k];   // v3.1 cosmetic slots
+  S = { d, ctx, inv, stage, equipped, assets, hp, viewing, cos };
+  const titleName = cos.items.find(i => i.key === equipped.title)?.name;
   const st = stats(d, ctx), lv = ctx.lv;
   const rk = RANKS[stage], next = RANKS[stage + 1];
   const name = viewing ? (app.viewAs.name || 'Mikha').split(' ')[0] : firstName();
@@ -68,7 +72,7 @@ export async function renderHero() {
         <div class="herostage" id="herostage" role="img" aria-label="${esc(name)}'s hero, ${esc(rk.name)} stage">
           <div class="hs-static">${heroPic({ stage }, { w: 300, h: 450 })}</div>
         </div>
-        <div class="hp-plate"><div><span class="belt-chip" style="--belt:${rk.color}"><i></i>${esc(rk.belt)} · Stage ${stage + 1}/8</span><div class="nm" style="margin-top:8px">${esc(name)}</div><div class="ttl">${esc(rk.name)}</div></div>
+        <div class="hp-plate"><div><span class="belt-chip" style="--belt:${rk.color}"><i></i>${esc(rk.belt)} · Stage ${stage + 1}/8</span><div class="nm" style="margin-top:8px">${esc(name)}</div><div class="ttl">${esc(rk.name)}</div>${titleName ? `<div class="htitle">“${esc(titleName)}”</div>` : ''}</div>
           <div class="hp-lv"><div><small>LV</small><b>${lv.level}</b></div></div></div>
         <div class="hp-foot">
           <div class="row between"><span class="nd-label">Level ${lv.level} · ${esc(lv.tier)}</span><span class="nd-label nd-num">${fmtNum(ctx.xp)} XP</span></div>
@@ -82,7 +86,7 @@ export async function renderHero() {
           <div class="nd-card stat"><div class="nd-label">Focus</div><div class="v">${st.focus}%</div><div class="nd-sub" style="font-size:11.5px">avg last 30</div></div>
           <div class="nd-card stat"><div class="nd-label">Spirit</div><div class="v">${st.spirit}</div><div class="nd-sub" style="font-size:11.5px">best streak</div></div>
         </div>
-        <div class="nd-tabs" role="tablist">${[['gear', 'Gear'], ['loot', `Loot ${inv.filter(i => i.owned).length}/${inv.length}`], ['mastery', 'Mastery'], ['evolve', 'Evolution']].map(([k, l]) => `<button role="tab" class="${heroTab === k ? 'on' : ''}" data-tab2="${k}">${l}</button>`).join('')}</div>
+        <div class="nd-tabs" role="tablist">${[['gear', 'Gear'], ['loot', `Loot ${inv.filter(i => i.owned).length}/${inv.length}`], ['chest', `Chest ${cos.owned.size}/${cos.items.length}`], ['mastery', 'Mastery'], ['evolve', 'Evolution']].map(([k, l]) => `<button role="tab" class="${heroTab === k ? 'on' : ''}" data-tab2="${k}">${l}</button>`).join('')}</div>
         <div id="hp-tab"></div>
       </div>
     </div>
@@ -119,8 +123,11 @@ function renderTab() {
   if (heroTab === 'gear') el.innerHTML = gearHTML();
   else if (heroTab === 'loot') el.innerHTML = lootHTML();
   else if (heroTab === 'mastery') el.innerHTML = masteryHTML();
+  else if (heroTab === 'chest') el.innerHTML = chestHTML();
   else el.innerHTML = evolveHTML();
   $$('[data-item]', el).forEach(b => b.onclick = () => equip(b.dataset.item));
+  $$('[data-cos]', el).forEach(b => b.onclick = () => equipCosmetic(b.dataset.kind, b.dataset.cos));
+  const tr = $('#trade', el); if (tr) tr.onclick = trade;
   $$('[data-sf]', el).forEach(b => b.onclick = () => { slotFilter = b.dataset.sf; renderTab(); });
   const ep = $('#evoprev', el);
   if (ep) ep.onclick = async () => {
@@ -199,6 +206,44 @@ function evolveHTML() {
     : '<p class="nd-sub">Final form reached. Keep every seal strong!</p>'}
     <div class="belts" style="margin-top:16px">${RANKS.map((r, i) => `<span class="${i < stage ? 'past' : i === stage ? 'now' : ''}" style="--belt:${r.color === '#1B1826' ? '#3A3550' : r.color}" title="${esc(r.name)}"></span>`).join('')}</div>
   </div>`;
+}
+
+/* ---- v3.1 chest collection: titles, card frames, shards (auras live in Loot/Gear) ---- */
+const CR = { common: ['Common', '#B8C2D0'], rare: ['Rare', '#3987e5'], epic: ['Epic', '#B9A6FF'] };
+function chestHTML() {
+  const { cos, equipped, viewing } = S;
+  const kind = (k) => cos.items.filter(i => i.kind === k);
+  const card = (i) => { const own = cos.owned.has(i.key), on = equipped[i.kind] === i.key, [rn, rc] = CR[i.rarity];
+    const pv = i.kind === 'frame' ? `<span class="ci-frame" style="--c1:${esc(i.data?.c1 || '#fff')};--c2:${esc(i.data?.c2 || '#333')}">?</span>`
+      : i.kind === 'aura' ? `<span class="ci-aura" style="--ac:${esc(i.data?.color || '#fff')}"></span>` : '';
+    return `<button class="cos ${own ? '' : 'locked'} ${on ? 'on' : ''}" style="--rc:${rc}" ${own && !viewing && i.kind !== 'aura' ? `data-cos="${i.key}" data-kind="${i.kind}"` : 'aria-disabled="true"'}>
+      ${pv}<div class="tx"><span class="rr" style="color:${rc}">${rn}</span><b ${i.kind === 'title' && own ? 'class="ci-title sm"' : ''}>${own ? (i.kind === 'title' ? `“${esc(i.name)}”` : esc(i.name)) : '???'}</b><span class="st">${own ? (i.kind === 'aura' ? 'Equip in Gear' : on ? '✓ Equipped' : 'Tap to equip') : '🔒 Chest'}</span></div></button>`; };
+  return `<div class="nd-stack" style="gap:14px">
+    <div class="nd-card"><div class="row between"><div><div class="nd-h2" style="font-size:18px">Shards</div><div class="nd-sub" style="font-size:12px">Duplicates from chests. 10 shards = pick any item.</div></div><b class="shards num">💎 ${cos.shards}/10</b></div>
+      ${!viewing && cos.shards >= 10 ? '<button class="nd-btn primary block" id="trade" style="margin-top:10px">Trade 10 shards →</button>' : ''}</div>
+    <div><div class="nd-sec"><div class="nd-h2" style="font-size:18px">Titles</div><span class="nd-sub">${kind('title').filter(i => cos.owned.has(i.key)).length}/${kind('title').length}</span></div><div class="cosgrid">${kind('title').map(card).join('')}</div></div>
+    <div><div class="nd-sec"><div class="nd-h2" style="font-size:18px">Card frames</div><span class="nd-sub">for the Monster Dex</span></div><div class="cosgrid">${kind('frame').map(card).join('')}</div></div>
+    <div><div class="nd-sec"><div class="nd-h2" style="font-size:18px">Chest auras</div><span class="nd-sub">${kind('aura').filter(i => cos.owned.has(i.key)).length}/${kind('aura').length}</span></div><div class="cosgrid">${kind('aura').map(card).join('')}</div></div>
+    <p class="nd-sub" style="font-size:12px">Every finished round of 10 gives one chest. More stars, better odds: 0–1★ Common 80% · Rare 18% · Epic 2%; 2★ 60/32/8; 3★ always Epic.</p>
+  </div>`;
+}
+function equipCosmetic(kind, key) {
+  if (S.viewing) return;
+  const eq = { ...S.equipped };
+  if (eq[kind] === key) delete eq[kind]; else eq[kind] = key;
+  S.equipped = eq; renderTab();
+  const t = S.cos.items.find(i => i.key === eq.title)?.name, plate = document.querySelector('.hp-plate .htitle');
+  if (kind === 'title') { if (plate) plate.textContent = t ? `“${t}”` : ''; else if (t) document.querySelector('.hp-plate .ttl')?.insertAdjacentHTML('afterend', `<div class="htitle">“${esc(t)}”</div>`); }
+  clearTimeout(saveT);
+  saveT = setTimeout(() => saveHero({ equipped: eq }).catch(e => toast(e.message, 2500)), 600);
+}
+async function trade() {
+  const { cos } = S, open = cos.items.filter(i => !cos.owned.has(i.key));
+  if (!open.length) { toast('You own everything already!', 2000); return; }
+  const v = await sheet({ title: 'Pick an item (10 shards)', body: '', actions: [...open.map(i => ({ label: `${CR[i.rarity][0]} · ${i.name} (${i.kind})`, value: i.key })), { label: 'Cancel', value: null }] });
+  if (!v) return;
+  try { const r = await redeemShards(v); cos.owned.add(v); cos.shards = r.shards; S.ctx.cosmetics = cos.owned; S.inv = inventory(S.ctx); toast(`✨ ${r.item.name} is yours!`, 2200); renderTab(); }
+  catch (e) { toast(e.message, 2600); }
 }
 
 async function equip(key) {
