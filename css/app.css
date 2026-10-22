@@ -661,6 +661,7 @@ html.nd-on .sheet .btn.primary{background:linear-gradient(135deg,#FF6A3D,#FFB13D
 .nd .ring span{width:44px;height:44px;border-radius:50%;background:#16122C;display:grid;place-items:center;font-family:var(--display);font-size:15px;color:#fff}
 .nd .gate-card{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;background:radial-gradient(60% 100% at 15% 60%,color-mix(in srgb,var(--belt) 35%,transparent),transparent 70%),var(--nd-panel)}
 .nd .gate-card svg.gate{width:100%;height:auto}
+.nd .gate-card .mon-wrap{width:100%!important;height:auto!important;aspect-ratio:1}
 .nd .fam-list{display:flex;flex-direction:column;gap:8px}
 .nd .fam-row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid var(--nd-line);cursor:pointer;color:inherit;text-align:left;width:100%}
 .nd .fam-row:hover{background:rgba(255,255,255,.07)}
