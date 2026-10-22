@@ -89,6 +89,7 @@
       <div class="stack" id="qstack">
         <div class="exambanner" id="exambanner" hidden></div>
         <div class="exambanner benchline" id="benchline" hidden></div>
+        <div class="buffs" id="buffs" hidden></div>
         <div class="arena" id="arena" hidden aria-hidden="true">
           <span class="ar-kanji">斬</span>
           <div class="ar-mon" id="armon"></div>
@@ -141,6 +142,11 @@
   <section class="screen nd" id="s-lesson" aria-label="Lesson">
     <div class="top"><button class="back" id="lesson-back" aria-label="Back">‹</button><h2 id="lesson-title" style="font-size:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Lesson</h2></div>
     <div class="scroll no-tab" id="lesson-scroll"><div id="lesson-body"></div></div>
+  </section>
+  <!-- INTEL (v3.0: lesson as swipe cards that charge boss buffs) -->
+  <section class="screen nd" id="s-intel" aria-label="Boss Intel">
+    <div class="top"><button class="back" id="intel-back" aria-label="Back">‹</button><h2 id="intel-title" style="font-size:22px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Scout the boss</h2></div>
+    <div class="scroll no-tab" id="intel-scroll"><div id="intel-body"></div></div>
   </section>
   <!-- SCHEDULE (school assessment calendar) -->
   <section class="screen nd" id="s-schedule" aria-label="Schedule">
