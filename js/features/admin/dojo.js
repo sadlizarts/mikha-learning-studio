@@ -26,18 +26,19 @@ export async function renderDojoAdmin(body) {
     const sealed = list.filter(b => b.st.beatNow).length;
     const rows = list.map(b => {
       const [l, c] = LABEL[b.st.status];
-      return `<tr>
-        <td><div class="row" style="gap:8px;align-items:center">${bossSVG(b.ch, m.color, { state: b.st.status === 'defeated' ? 'defeated' : b.st.status === 'new' ? 'new' : 'fight', size: 34 })}<div><b>${esc(shortCode(b.ch.code))}</b> ${esc(b.ch.name)}<div class="note">${esc(b.name)} · ${esc(b.title)}</div></div></div></td>
-        <td><span class="chip" style="--c:${c}"><span class="dot"></span>${l}</span></td>
-        <td class="r num">${b.st.status === 'defeated' ? '0' : b.st.hp}%</td>
-        <td class="r num">${b.st.n ? b.st.acc + '%' : '—'}</td>
-        <td class="r num">${b.st.n || 0}</td>
-        <td>${b.beaten ? `${TIER_LABEL[cardTier(b.beaten.best_accuracy)]} · ${b.beaten.best_accuracy}%` : '—'}</td></tr>`;
+      const hp = b.st.status === 'defeated' ? 0 : b.st.hp;
+      return `<div class="adb-row">
+        <div class="adb-mon">${bossSVG(b.ch, m.color, { state: b.st.status === 'defeated' ? 'defeated' : b.st.status === 'new' ? 'new' : 'fight', size: 44 })}</div>
+        <div class="adb-main"><div class="adb-top"><b>${esc(shortCode(b.ch.code))} ${esc(b.ch.name)}</b><span class="chip" style="--c:${c}"><span class="dot"></span>${l}</span></div>
+          <div class="adb-sub">${esc(b.name)} · ${esc(b.title)}</div>
+          <div class="adb-hp"><div class="hp"><i style="--p:${hp}%"></i></div><span class="num">HP ${hp}%</span></div>
+          <div class="adb-meta num"><span>30 terakhir: <b>${b.st.n ? b.st.acc + '%' : '—'}</b></span><span>${b.st.n || 0} jawaban</span><span>${b.beaten ? `Kartu ${TIER_LABEL[cardTier(b.beaten.best_accuracy)]} · ${b.beaten.best_accuracy}%` : 'Belum ada kartu'}</span></div></div>
+      </div>`;
     }).join('');
-    return `<div class="panel" style="border-left:8px solid ${m.color}">
-      <div class="row between"><h3>${esc(m.short)}</h3><span class="note num">${sealed}/${list.length} sealed</span></div>
-      <details ${list.some(b => ['revived', 'cracked'].includes(b.st.status)) ? 'open' : ''} style="margin-top:6px"><summary class="note" style="cursor:pointer;font-weight:900">Bosses (${list.length})</summary>
-        <table class="tbl" style="margin-top:6px"><thead><tr><th>Chapter · boss</th><th>Status</th><th class="r">HP</th><th class="r">Last 30</th><th class="r">Answers</th><th>Card</th></tr></thead><tbody>${rows}</tbody></table>
+    return `<div class="panel" style="border-left:4px solid ${m.color}">
+      <div class="row between"><h3>${esc(m.short)}</h3><span class="note num">${sealed}/${list.length} tersegel</span></div>
+      <details ${list.some(b => ['revived', 'cracked'].includes(b.st.status)) ? 'open' : ''} style="margin-top:6px"><summary class="note" style="cursor:pointer;font-weight:900">Boss (${list.length})</summary>
+        <div class="adb-list">${rows}</div>
       </details></div>`;
   }).join('');
 

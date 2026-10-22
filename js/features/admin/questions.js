@@ -54,7 +54,7 @@ async function list(idx) {
     }
     if (my !== listSeq) return;
     const pages = Math.max(1, Math.ceil(count / 40));
-    el.innerHTML = `<p class="note" style="margin:0 0 8px">${count} question${count === 1 ? '' : 's'}${F.mode === 'browse' && pages > 1 ? ` · page ${F.page + 1}/${pages}` : ''}</p>
+    el.innerHTML = `<p class="note" style="margin:0 0 8px">${count ?? rows.length} question${(count ?? rows.length) === 1 ? '' : 's'}${F.mode === 'browse' && pages > 1 ? ` · page ${F.page + 1}/${pages}` : ''}</p>
       <div class="stack" style="gap:8px">${rows.map(q => `<button class="qrow ${q.is_active ? '' : 'inactive'}" data-q="${q.id}">
         ${F.mode === 'missed' ? `<div class="note">${esc(chapterLabel(idx, q.chapter_id))}</div>` : ''}
         <div class="s">${esc(q.stem)}</div><div style="margin-top:6px">${qTags(q, stats[q.id])}</div></button>`).join('') || '<div class="panel sunk empty">Nothing here.</div>'}</div>

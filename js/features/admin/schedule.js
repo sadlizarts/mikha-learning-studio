@@ -18,7 +18,7 @@ export async function renderSchedule(body) {
       <button class="btn small" id="s-past">${showPast ? 'Hide finished' : 'Show finished'}</button></div>
       <p class="note" style="margin:4px 0 8px">Pick the chapters each assessment covers. Mikha sees the next 14 days on Home, with a Practice button for those chapters.</p>
       <table class="tbl"><thead><tr><th>When</th><th>Assessment</th><th>Chapters</th><th></th></tr></thead><tbody>
-      ${rows.map(a => { const k = KIND[a.kind]; const m = subjectMeta({ name: a.subject_name });
+      ${rows.map(a => { const k = KIND[a.kind] || KIND.teacher_paced; const m = subjectMeta({ name: a.subject_name });
         return `<tr class="${a.is_active ? '' : 'off'}"><td><b>${esc(countdown(a, today))}</b><div class="note">${esc(dateRange(a))} · S${a.semester ?? '-'} W${a.week ?? '-'}</div></td>
           <td><span class="tag" style="border-color:${m.color};color:${m.color}">${esc(m.short)}</span> ${esc(a.title || k.label)}<div class="note">${esc(k.sub)}${a.notes ? ' · ' + esc(a.notes) : ''}</div></td>
           <td>${(a.chapter_ids || []).map(id => `<span class="tag">${esc(chName(id))}</span>`).join('') || (k.practice ? '<span class="tag warn">not set</span>' : '<span class="tag mute">n/a</span>')}</td>
@@ -48,7 +48,7 @@ export async function renderSchedule(body) {
 
 function openEditor(body, a, cat) {
   const ed = $('#s-editor', body);
-  const k = KIND[a.kind];
+  const k = KIND[a.kind] || KIND.teacher_paced;
   const chs = cat.chapters.filter(c => c.subject_id === a.subject_id);
   const sel = new Set(a.chapter_ids || []);
   ed.hidden = false;
