@@ -9,6 +9,8 @@ import { anchorLabel } from '../lesson-md.js';
 import { RANKS, rules, bossState, bossName } from '../dojo.js';
 import { monsterSVG, examBoss, phaseOf, familyOf, formName, FAMILIES, GATE_ORDER } from '../monsters.js';
 import { STAGE_ART } from '../hero/art.js';
+import { staleWarning } from '../retreat.js';
+import { myRetreats } from '../store.js';
 
 const OK_WORDS = ['NICE!', 'BOOM!', 'SHARP!', 'GOT IT!', 'CLEAN!'];
 const BAD_WORDS = ['ALMOST', 'NOT YET', 'HMM…'];
@@ -24,7 +26,8 @@ function battleSetup(cat) {
     const order = GATE_ORDER.filter(k => cat.chapters.some(c => familyOf(c) === k));
     exam = (order.length ? order : GATE_ORDER)[er % (order.length || GATE_ORDER.length)];
   }
-  S.battle = { R, chs, statBy: cat?.statBy || {}, exam };
+  S.battle = { R, chs, statBy: cat?.statBy || {}, exam, angry: new Set() };
+  const B = S.battle; myRetreats().then(r => { B.angry = new Set(r?.angry || []); if (S?.battle === B && !S.locked) { $('#arena').dataset.foe = ''; drawArena(qAt()); } }).catch(() => { /* optional */ });
 }
 function foeFor(q) {
   const B = S.battle; if (!B) return null;
@@ -34,7 +37,8 @@ function foeFor(q) {
   let ph = st ? phaseOf(bossState(st, false, B.R), B.R) : 'minion';
   if (ph === 'new') ph = 'minion'; if (ph === 'sealed') ph = 'boss';
   const fam = familyOf(ch), m = subjectMeta(ch.subject || S.idx[q.chapter_id]?.subject);
-  return { key: q.chapter_id, name: bossName(ch, m.key).name, sub: `${formName(fam, ph)} · ${m.short} ${shortCode(ch.code)}`, html: monsterSVG(ch, { phase: ph, size: 150 }), color: FAMILIES[fam].c, pool: S.qs.filter(x => x.chapter_id === q.chapter_id) };
+  const angry = B.angry?.has(q.chapter_id);
+  return { key: q.chapter_id, name: (angry ? '😠 ' : '') + bossName(ch, m.key).name, sub: `${angry ? 'Angry · ' : ''}${formName(fam, ph)} · ${m.short} ${shortCode(ch.code)}`, html: monsterSVG(ch, { phase: ph, size: 150, angry }), color: FAMILIES[fam].c, pool: S.qs.filter(x => x.chapter_id === q.chapter_id) };
 }
 const foeHp = (foe) => Math.max(0, Math.round(100 - 100 * foe.pool.filter(x => x.answer?.is_correct).length / Math.max(1, foe.pool.length)));
 function drawArena(q, { swap = true } = {}) {
@@ -45,14 +49,14 @@ function drawArena(q, { swap = true } = {}) {
   const hp = foeHp(foe); $('#arhp').style.width = hp + '%'; $('#arhpt').textContent = `HP ${hp}%`;
   return foe;
 }
-function strike(ok, q) {
+function strike(ok, q, counter = false) {
   const ar = $('#arena'); if (ar.hidden) return;
   const foe = foeFor(q); if (!foe) return;
   const before = parseInt($('#arhp').style.width) || 100, hp = foeHp(foe);
   $('#arhp').style.width = hp + '%'; $('#arhpt').textContent = `HP ${hp}%`;
   const fx = $('#arfx'), mon = $('#armon .mon-wrap');
   if (ok) {
-    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}</b>${hp === 0 ? '<b class="ar-ko">SEALED!</b>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
+    fx.innerHTML = `<i class="ar-slash"></i><b class="ar-dmg">-${Math.max(1, before - hp)}</b>${hp === 0 ? '<b class="ar-ko">SEALED!</b>' : counter ? '<span class="ar-crit ar-counter">COUNTER STRIKE +5 XP</span>' : S.combo >= 5 ? '<span class="ar-crit">CRITICAL</span>' : ''}`;
     if (mon) { mon.classList.remove('hit'); void mon.offsetWidth; mon.classList.add('hit'); }
   } else {
     fx.innerHTML = '<i class="ar-claw"></i>';
@@ -84,7 +88,7 @@ export async function renderQuiz(id) {
   if (st !== 'in_progress') { toast('That practice was closed. Start a new one from Home.', 3000); navigate('#/home', { replace: true }); return; }
   let idx = {}, cat = null;
   try { cat = await catalog(); idx = chapterIndex(cat); } catch { /* chip falls back to plain text */ }
-  S = { data, qs: data.questions, i: 0, hint: 0, t0: 0, combo: 0, idx, locked: false, lidx: null };
+  S = { data, qs: data.questions, i: 0, hint: 0, t0: 0, combo: 0, idx, locked: false, lidx: null, prevOk: null };
   try { battleSetup(cat); } catch { S.battle = null; }
   $('#arena').dataset.foe = '';
   loadProgress().then(p => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(p?.rank || 0)})`; }).catch(() => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(0)})`; });
@@ -181,13 +185,14 @@ async function choose(orig) {
   });
   $('#hintbtn').hidden = true;
 
+  const counter = ok && S.prevOk === false; S.prevOk = ok;
   S.combo = ok ? S.combo + 1 : 0;
   const imp = $('#impact');
-  imp.textContent = ok ? pick(OK_WORDS) : pick(BAD_WORDS);
+  imp.textContent = counter ? 'COUNTER!' : ok ? pick(OK_WORDS) : pick(BAD_WORDS);
   imp.className = 'impact' + (ok ? '' : ' bad');
   const mk = $('#mk-quiz'); mk.classList.remove('happy', 'sad'); void mk.offsetWidth; mk.classList.add(ok ? 'happy' : 'sad');
-  $('#mkline').textContent = ok ? pick(OK_LINES) : pick(BAD_LINES);
-  try { strike(ok, q); } catch { /* battle is decoration */ }
+  $('#mkline').textContent = counter ? 'Counter strike! +5 XP for bouncing back.' : ok ? pick(OK_LINES) : pick(BAD_LINES);
+  try { strike(ok, q, counter); } catch { /* battle is decoration */ }
   $('#explain').className = 'panel explain' + (ok ? '' : ' bad');
   $('#explain-h').textContent = ok ? "Why it's right" : 'What to remember';
   $('#exptext').innerHTML = rich(q.explanation || '');
@@ -249,9 +254,10 @@ $('#ctx').addEventListener('click', e => {
   f.setAttribute('aria-expanded', open);
 });
 $('#quitbtn').addEventListener('click', async () => {
+  const warn = S ? await staleWarning(S.qs.filter(q => q.answer).length) : '';
   const leave = await sheet({
     title: 'Leave this practice?',
-    body: "Your answers so far are saved. You can continue later from Home, but you won't get a score until you finish.",
+    body: "Your answers so far are saved. You can continue later from Home, but you won't get a score until you finish." + warn,
     actions: [{ label: 'Keep going', value: false }, { label: 'Leave', value: true, cls: 'danger' }],
   });
   if (leave) { if (S) flushAnswers(S.data.attempt.id); navigate('#/home'); toast('Saved. Continue anytime from Home.'); }

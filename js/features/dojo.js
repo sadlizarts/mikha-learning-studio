@@ -29,7 +29,7 @@ export function dojoFrom(cat, prog, dj, viewing = !!app.viewAs) {
     while (usedT.has(tech) && j < 20) tech = techName(ch, '#' + (++j));
     usedT.add(tech);
     const fam = familyOf(ch), phase = phaseOf(st, R);
-    return { ch, m, st, beaten: dj.beaten[c.chapter_id] || null, ...nm, tech, fam, phase, title: formName(fam, ['sealed', 'new'].includes(phase) ? 'boss' : phase) };
+    return { ch, m, st, beaten: dj.beaten[c.chapter_id] || null, angry: (dj.angry || []).includes(c.chapter_id), ...nm, tech, fam, phase, title: formName(fam, ['sealed', 'new'].includes(phase) ? 'boss' : phase) };
   });
   const order = Object.fromEntries(cat.chapters.map((c, i) => [c.chapter_id, i]));
   bosses.sort((a, b) => order[a.ch.chapter_id] - order[b.ch.chapter_id]);
@@ -112,7 +112,7 @@ export function bossCard(b) {
   const f = FAMILIES[b.fam], ph = b.phase, came = b.st.status === 'revived';
   const tier = ph === 'sealed' ? '✓' : PHASES[ph].tier || '?';
   return `<button class="bcard ${ph}${came ? ' revived' : ''}" data-boss="${b.ch.chapter_id}" style="--fc:${f.c}">
-    <div class="port">${monsterSVG(b.ch, { phase: ph, size: 118 })}<span class="tier" title="${PHASES[ph].label}">${tier}</span>${came ? '<span class="stamp nd-pill" style="--c:#FF6B7A"><span class="dot"></span>Came back</span>' : ''}</div>
+    <div class="port">${monsterSVG(b.ch, { phase: ph, size: 118, angry: b.angry })}<span class="tier" title="${PHASES[ph].label}">${tier}</span>${came ? '<span class="stamp nd-pill" style="--c:#FF6B7A"><span class="dot"></span>Came back</span>' : b.angry && ph !== 'sealed' ? '<span class="stamp nd-pill" style="--c:#FF6B7A"><span class="dot"></span>Angry</span>' : ''}</div>
     <div class="meta">
       <div class="nm">${ph === 'new' ? '???' : esc(b.name)}</div>
       <div class="sub">${ph === 'new' ? 'Unknown' : `${PHASES[ph].label} · ${esc(b.title)}`}<br>${esc(b.m.short)} ${esc(shortCode(b.ch.code))} · ${esc(b.ch.name)}</div>

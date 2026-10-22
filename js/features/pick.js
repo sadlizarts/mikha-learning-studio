@@ -2,6 +2,7 @@
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast } from '../ui.js';
 import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress } from '../store.js';
 import { app, catalog } from '../state.js';
+import { confirmRetreat } from '../retreat.js';
 import { monsterSVG, phaseOf } from '../monsters.js';
 import { bossState, rules } from '../dojo.js';
 import { show, navigate } from '../router.js';
@@ -77,12 +78,12 @@ async function start() {
       const ip = await inProgressAttempt(app.user.id);
       const choice = await sheet({
         title: 'You have a practice in progress',
-        body: ip ? `${ip.answered_count}/${ip.total_questions} answered. Continue it, or start fresh?` : 'Continue it, or start fresh?',
+        body: ip ? `${ip.answered_count}/${ip.total_questions} answered. Continue it, or start fresh?${ip.answered_count ? ' Starting fresh counts as a Retreat and costs XP.' : ''}` : 'Continue it, or start fresh?',
         actions: [{ label: 'Continue it', value: 'continue', cls: 'primary' }, { label: 'Start fresh', value: 'fresh' }],
       });
       if (choice === 'continue' && ip) { navigate(`#/quiz/${ip.id}`); return; }
       if (choice !== 'fresh') return;
-      if (ip) await abandonAttempt(ip.id);
+      if (ip && !(await confirmRetreat(ip))) return;
       data = await startAttempt(ids, len);
     }
     prefs.set('lastChapters', ids);

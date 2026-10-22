@@ -9,6 +9,9 @@ import { app, catalog, chapterIndex, firstName, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
 import { dojoFrom, bindHomeDojo } from './dojo.js';
 import { STAGE_ART } from '../hero/art.js';
+import { confirmRetreat } from '../retreat.js';
+import { myRetreats, markRetreatsSeen } from '../store.js';
+import { RANKS } from '../dojo.js';
 import { FAMILIES, familyPortrait, monsterSVG } from '../monsters.js';
 
 
@@ -120,7 +123,7 @@ export async function renderHome() {
   const { rk, R, bosses } = dd;
   const nAns = prog?.answers_today || 0, kiPct = Math.min(100, Math.round(100 * nAns / R.target));
   const pr = { revived: 0, cracked: 1, fight: 2 };
-  const next = bosses.filter(b => b.st.status in pr).sort((a, b) => pr[a.st.status] - pr[b.st.status] || a.st.hp - b.st.hp)[0]
+  const next = bosses.find(b => b.angry && b.phase !== 'sealed') || bosses.filter(b => b.st.status in pr).sort((a, b) => pr[a.st.status] - pr[b.st.status] || a.st.hp - b.st.hp)[0]
     || bosses.find(b => b.phase !== 'sealed' && b.phase !== 'new');
   const say = viewing ? `Watching ${esc(app.viewAs.name.split(' ')[0])}'s progress.`
     : inprog ? 'Let\'s finish the practice we started!'
@@ -147,8 +150,8 @@ export async function renderHome() {
         <div class="hm-streak"><b class="num">${streak}</b><span>day streak${prog?.freeze_ready ? ' · 🛡️' : ''}</span></div></div>
     </div>`;
   const bossCard = next ? `<div class="nd-card hm-boss nextboss" data-boss="${next.ch.chapter_id}" style="--fc:${FAMILIES[next.fam].c}">
-      <div class="art">${monsterSVG(next.ch, { phase: next.phase, size: 128 })}</div>
-      <div class="grow" style="min-width:0"><div class="nd-label" style="color:${next.st.status === 'revived' ? '#FF8A9A' : 'var(--nd-dim)'}">${next.st.status === 'revived' ? '● Came back' : next.st.status === 'cracked' ? '● Seal cracking' : 'Next target'}</div>
+      <div class="art">${monsterSVG(next.ch, { phase: next.phase, size: 128, angry: next.angry })}</div>
+      <div class="grow" style="min-width:0"><div class="nd-label" style="color:${next.st.status === 'revived' ? '#FF8A9A' : 'var(--nd-dim)'}">${next.angry ? '😠 Angry · you retreated' : next.st.status === 'revived' ? '● Came back' : next.st.status === 'cracked' ? '● Seal cracking' : 'Next target'}</div>
         <div class="nd-h2">${esc(next.name)}</div><div class="nd-sub">${esc(next.title)} · ${esc(next.m.short)} ${esc(shortCode(next.ch.code))}</div>
         <div class="hp" style="margin:8px 0 10px" aria-label="HP ${next.st.hp}%"><i style="--p:${next.st.hp}%"></i></div>
         ${viewing ? `<span class="nd-sub num">HP ${next.st.hp}%</span>` : '<button class="nd-btn primary small" data-fight>Fight 30 →</button>'}</div>
@@ -162,8 +165,16 @@ export async function renderHome() {
   const resumeNd = resume.replace('panel cta resume', 'nd-card emph hm-resume');
   const ctaNd = viewing ? cta : '';
 
+  let rt = null; try { rt = await myRetreats(vid); } catch { /* notice is optional */ }
+  const unseen = (rt?.unseen || []);
+  const rtCard = viewing ? (rt?.today ? `<div class="nd-card hm-retreat"><div class="nd-label" style="color:#FF9A9A">Retreats today</div><b class="num">${rt.today}</b></div>` : '')
+    : unseen.length ? `<div class="nd-card hm-retreat" id="rtcard"><div class="nd-label" style="color:#FF9A9A">😠 Retreat recorded</div>
+      ${unseen.map(r => `<div class="rt-line"><span>${r.auto ? 'Practice left for 24 hours' : `Retreat #${r.nth} today`}</span><b class="num">−${r.xp_lost} XP</b></div>${r.rank_after < r.rank_before ? `<div class="rt-line drop">Belt dropped to ${esc(RANKS[r.rank_after]?.belt || '')}. Pass the exam again to win it back.</div>` : ''}`).join('')}
+      <p class="nd-sub" style="margin:6px 0 10px">Finish your battles to calm the angry monsters. Wrong answers come back first.</p>
+      <button class="nd-btn small" id="rtok">Got it</button></div>` : '';
   body.innerHTML = `<div class="nd-stack hm">
     ${greet}
+    ${rtCard}
     <div class="hgrid">
     <div class="hmain">
     ${hi(resumeNd, 1)}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
@@ -185,6 +196,7 @@ export async function renderHome() {
   </div>`;
   body.dataset.ready = '1';
   bindHomeDojo(body, dd);
+  const rto = $('#rtok'); if (rto) rto.onclick = () => { markRetreatsSeen(); $('#rtcard')?.remove(); };
 
   $('#pwbtn').onclick = () => passwordSheet();
   if (wantPw) { const o = wantPw; wantPw = null; passwordSheet(o); }
@@ -194,9 +206,7 @@ export async function renderHome() {
   };
   const fresh = $('#freshbtn');
   if (fresh) fresh.onclick = async () => {
-    const ok = await sheet({ title: 'Start fresh?', body: `Your ${inprog.answered_count} answers still count for your chapter stats, but this practice won't get a score.`, actions: [{ label: 'Keep it', value: false }, { label: 'Start fresh', value: true, cls: 'danger' }] });
-    if (!ok) return;
-    try { await abandonAttempt(inprog.id); navigate('#/pick'); } catch (e) { toast(e.message, 3000); }
+    try { if (await confirmRetreat(inprog, { keepLabel: 'Keep it' })) navigate('#/pick'); } catch (e) { toast(e.message, 3000); }
   };
 }
 
