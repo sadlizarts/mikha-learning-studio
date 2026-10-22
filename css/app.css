@@ -795,3 +795,91 @@ html.nd-on .sheet .btn.primary{background:linear-gradient(135deg,#FF6A3D,#FFB13D
 .nd .bcard .port .mon-wrap{width:118px;height:118px}
 .fam-pic{border-radius:12px;object-fit:cover;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
 .hs-rig .hs-base.heropic{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:none}
+
+/* ===== v2.3 Night Dojo skin for every student screen =====
+   Legacy components keep their markup; inside .screen.nd the light tokens are remapped to the night palette
+   and the comic borders/offset shadows become glass. Admin (.screen.admin) is untouched. */
+.screen.nd{--paper:transparent;--paper-2:rgba(255,255,255,.05);--card:#17132C;
+  --ink:#FFFFFF;--ink-2:#E3DEF5;--ink-3:#A9A1C9;--line:rgba(255,255,255,.14);
+  --ember:#FF6A3D;--ember-ink:#1B1428;--volt:#FFD25A;--volt-2:#FFB13D;--volt-ink:#1B1428;
+  --ok:#46E0A0;--ok-soft:rgba(70,224,160,.13);--ok-ink:#06281A;--bad:#FF6B7A;--bad-soft:rgba(255,107,122,.13);--bad-ink:#2A0A10;
+  --hint:#B9A6FF;--hint-soft:rgba(155,133,255,.15);
+  --sub-math:#5B9BFF;--sub-sci:#2FD39A;--sub-eng:#A48CFF;--sub-ind:#FF6B6F;--sub-pan:#FFC43D;--sub-aga:#36C9D3;--on-sub:#120E22;
+  --shadow:0 10px 28px rgba(0,0,0,.35);--shadow-sm:0 4px 12px rgba(0,0,0,.3);--shadow-press:0 2px 6px rgba(0,0,0,.3);--r:18px;--r-sm:12px;color-scheme:dark}
+.screen.nd .panel{background:var(--nd-panel);border:1px solid var(--nd-line);border-radius:20px}
+.screen.nd .panel.sunk{background:rgba(255,255,255,.035);border:1px solid var(--nd-line)}
+.screen.nd .btn{border:1px solid var(--nd-line2);border-radius:999px;background:rgba(255,255,255,.06);color:#fff;box-shadow:none;font-family:var(--body);font-weight:900;font-size:17px;letter-spacing:0}
+.screen.nd .btn.lg{font-size:20px}.screen.nd .btn.small{font-size:13px}
+.screen.nd .btn:active{transform:scale(.97);box-shadow:none}
+.screen.nd .btn.primary{border:0;background:linear-gradient(135deg,#FF6A3D,#FFB13D);color:#1B1428;box-shadow:0 8px 22px rgba(255,120,60,.35)}
+.screen.nd .btn.volt{border:0;background:linear-gradient(135deg,#FFD25A,#FFB13D);color:#1B1428;box-shadow:0 8px 22px rgba(255,200,80,.3)}
+.screen.nd .btn.danger{border:0;background:linear-gradient(135deg,#FF5A6E,#FF8A6E);color:#2A0A10}
+.screen.nd .btn.ghost{background:transparent}
+.screen.nd .back{border:1px solid var(--nd-line2);background:rgba(255,255,255,.06);border-radius:50%}
+.screen.nd .chip{border:1px solid var(--nd-line2);background:rgba(255,255,255,.05)}
+.screen.nd .field input,.screen.nd select,.screen.nd textarea{background:rgba(255,255,255,.06);color:#fff;border:1px solid var(--nd-line2)}
+.screen.nd .rec,.screen.nd .chap{border:1px solid var(--nd-line);background:rgba(255,255,255,.04);border-radius:16px}
+.screen.nd .chap.on{background:linear-gradient(135deg,rgba(255,210,90,.22),rgba(255,140,60,.12));border-color:rgba(255,210,90,.7);box-shadow:0 0 18px rgba(255,190,80,.25)}
+.screen.nd .chap.on .name,.screen.nd .chap.on .meta,.screen.nd .chap.on .acc{color:#fff}
+.screen.nd .chap .box{border:2px solid var(--nd-line2);background:transparent}
+.screen.nd .chap.on .box{background:linear-gradient(135deg,#FFD25A,#FFB13D);color:#1B1428;border-color:transparent}
+.screen.nd .opt{border:1px solid var(--nd-line2);background:rgba(255,255,255,.045);border-radius:16px;box-shadow:none}
+.screen.nd .opt .k{border:0;background:rgba(255,255,255,.09)}
+.screen.nd .opt.correct{border:1.5px solid var(--ok);box-shadow:0 0 20px rgba(70,224,160,.28)}
+.screen.nd .opt.wrong{border:1.5px solid var(--bad);box-shadow:0 0 20px rgba(255,107,122,.25)}
+.screen.nd .xpbar,.screen.nd .kibar{border:0;background:rgba(255,255,255,.08)}
+.screen.nd .xpbar i{background:linear-gradient(90deg,#7C8CFF,#C77DFF,#FFD25A)}
+.screen.nd .days b{border:0;background:rgba(255,255,255,.06);border-radius:8px;color:#8E86B0}
+.screen.nd .days b.done{background:linear-gradient(180deg,#FF8A3D,#FF5A3C);color:#fff;box-shadow:0 0 10px rgba(255,110,60,.45)}
+.screen.nd .days b.today{outline:2px solid var(--nd-gold);outline-offset:1px}
+.screen.nd .score-pill{border:0;background:rgba(255,255,255,.07)}
+.screen.nd .score-pill.good{background:var(--ok);color:var(--ok-ink);box-shadow:0 0 12px rgba(70,224,160,.35)}.screen.nd .score-pill.mid{background:var(--volt);color:var(--volt-ink);box-shadow:0 0 12px rgba(255,210,90,.3)}.screen.nd .score-pill.low{background:var(--bad);color:var(--bad-ink);box-shadow:0 0 12px rgba(255,107,122,.3)}
+.screen.nd .len{border:1px solid var(--nd-line2);background:rgba(255,255,255,.05);border-radius:14px}.screen.nd .len.on{background:linear-gradient(135deg,#FFD25A,#FFB13D);color:#1B1428;border-color:transparent}
+.screen.nd .tbl tr:nth-child(even) td{background:rgba(255,255,255,.03)}
+.screen.nd .tbl th{border-bottom:1px solid var(--nd-line2)}
+html.nd-on .toast{background:#F3F0FF;color:#1B1428}
+html.nd-on .sheet .panel{border-radius:22px}
+html.nd-on body{background:#0C0A18}
+
+/* ---- v2.3 Home (Night Dojo) ---- */
+.screen.nd .hp{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);height:10px}
+.screen.nd .hp i{background:linear-gradient(90deg,#FF5A6E,#FF9A6E)}
+.hm .hgrid{gap:16px}
+.hm-greet{display:flex;align-items:center;gap:12px;position:relative}
+.hm-ava{width:56px;height:56px;flex:none;border-radius:50%;background:#241c44 50% 12%/240% no-repeat;border:2px solid var(--belt,#FFD25A);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--belt,#FFD25A) 25%,transparent),0 0 18px color-mix(in srgb,var(--belt,#FFD25A) 40%,transparent)}
+.hm-bubble{position:relative;align-self:flex-start;margin:-10px 0 0 68px;background:#fff;color:#1B1428;font-weight:900;font-size:13px;line-height:1.25;border-radius:14px;padding:7px 11px;max-width:calc(100% - 68px);animation:bubbleIn .5s cubic-bezier(.2,.9,.2,1.3) .2s both}
+.hm-bubble::before{content:'';position:absolute;left:-6px;top:10px;border:6px solid transparent;border-right-color:#fff;border-left:0}
+@keyframes bubbleIn{from{opacity:0;transform:translateY(6px) scale(.9)}to{opacity:1;transform:none}}
+.hm-ring{width:68px;height:68px;flex:none;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--nd-gold) calc(var(--p)*1%),rgba(255,255,255,.08) 0);box-shadow:0 0 18px rgba(255,210,90,.25)}
+.hm-ring b{width:54px;height:54px;border-radius:50%;background:#151128;display:grid;place-items:center;font-family:var(--display);font-weight:400;font-size:22px;color:#fff}
+.hm-mission .days{margin-top:0;flex:1;max-width:230px}
+.hm-streak{text-align:right;flex:none}.hm-streak b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1;color:#FF8A3D;display:block}
+.hm-streak span{font-size:10.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--nd-dim)}
+.hm-boss{display:flex;gap:12px;align-items:center;cursor:pointer;background:radial-gradient(70% 90% at 18% 60%,color-mix(in srgb,var(--fc) 38%,transparent),transparent 70%),var(--nd-panel)}
+.hm-boss .art{flex:none;filter:drop-shadow(0 0 14px color-mix(in srgb,var(--fc) 55%,transparent))}
+.hm-exam{display:flex;flex-direction:column;gap:4px;text-align:left;width:100%;cursor:pointer;border-color:rgba(255,210,90,.5)!important;color:#fff}
+.hm-exam b{font-family:var(--display);font-weight:400;font-size:18px}
+.hm-worlds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hm-world{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 8px;border-radius:16px;cursor:pointer;color:#fff;
+  background:radial-gradient(80% 70% at 50% 35%,color-mix(in srgb,var(--c) 38%,transparent),transparent 75%),rgba(255,255,255,.03);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);transition:transform .15s}
+.hm-world:active{transform:scale(.96)}
+.hm-world .fam-pic{box-shadow:none;border-radius:0;object-fit:contain;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--c) 55%,transparent))}
+.hm-world b{font-family:var(--display);font-weight:400;font-size:14px}.hm-world small{font-size:11px;font-weight:800;color:var(--nd-dim)}
+.hm-world .nd-bar{width:100%;height:5px;margin-top:6px}
+.hm-start{position:relative}
+.hm-kanji{position:absolute;right:8px;top:-14px;font:900 110px/1 serif;color:rgba(255,255,255,.05);pointer-events:none}
+.hm-resume h2{color:#fff}.hm-resume p{color:var(--nd-gold)!important}.hm-resume .btn.ghost{color:#fff!important;border-color:var(--nd-line2)!important}
+.hm-resume .lines{display:none}
+.screen.nd .mission,.screen.nd .plan{border-left:3px solid var(--nd-gold)}.screen.nd .upnext{border-left:3px solid #5B9BFF}.screen.nd .upnext.alert{border-left-color:var(--nd-ember)}
+@media (min-width:1024px){.hm-worlds{grid-template-columns:repeat(3,1fr)}}
+/* v2.3 chapter rows: the chapter's monster replaces the code square */
+.screen.nd .code.mcode{width:58px;height:58px;border:0;border-radius:14px;position:relative;background:radial-gradient(60% 60% at 50% 55%,color-mix(in srgb,var(--c) 40%,transparent),transparent 75%);overflow:visible}
+.screen.nd .code.mcode .mon-wrap{position:absolute;inset:4px;width:auto!important;height:auto!important}
+.screen.nd .code.mcode .cbadge{font-weight:400;position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-family:var(--display);font-size:11px;line-height:1;padding:2px 6px;border-radius:6px;background:#0E0B1D;color:#fff;border:1px solid color-mix(in srgb,var(--c) 60%,transparent)}
+.screen.nd .code.mcode .mon-q{font-size:1.4em}
+.screen.nd .lrow{border:1px solid var(--nd-line);background:rgba(255,255,255,.04);border-radius:16px}
+.screen.nd .subtab{border:1px solid var(--nd-line2);background:rgba(255,255,255,.05);color:#fff;box-shadow:none;border-radius:999px}
+.screen.nd .subtab.on{background:color-mix(in srgb,var(--c) 30%,transparent);border-color:var(--c);box-shadow:0 0 14px color-mix(in srgb,var(--c) 40%,transparent);color:#fff}
+.screen.nd .btn.xs{font-size:12px;min-height:30px;padding:0 12px}
+.screen.nd .opt.correct .k{background:var(--ok);color:var(--ok-ink)}.screen.nd .opt.wrong .k{background:var(--bad);color:var(--bad-ink)}
