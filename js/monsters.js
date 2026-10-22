@@ -108,10 +108,10 @@ const SEAL = `<g transform="rotate(-16 60 58)"><rect x="50" y="16" width="20" he
 
 const SEAL_OVERLAY = `<svg class="seal-ov" viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-16 60 58)"><rect x="50" y="16" width="20" height="84" rx="2" fill="#FFF4D2" stroke="${INK}" stroke-width="2"/><path d="M55 26h10M55 34h10M60 42v34M55 52h10M54 66l12 6M55 84h10" stroke="#E8473C" stroke-width="2.2" stroke-linecap="round"/></g></svg>`;
 /** Painted monster portrait (v2.2.0, sheet 3). phase: new | minion | elite | boss | sealed. Idle float is CSS (seeded delay). */
-export function monsterSVG(ch, { phase = 'boss', size = 96 } = {}) {
+export function monsterSVG(ch, { phase = 'boss', size = 96, angry = false } = {}) {
   const fam = familyOf(ch), r = rng(seedOf('mon:' + ch.code));
   const hue = Math.round((r() - 0.5) * 20), delay = -(r() * 3).toFixed(2), form = phase === 'minion' ? 'minion' : phase === 'elite' ? 'elite' : 'boss';
-  return `<span class="mon-wrap mon-${phase}" style="width:${size}px;height:${size}px;--md:${delay}s"><img src="${monsterSrc(fam, form)}" alt="" width="${size}" height="${size}" style="filter:hue-rotate(${hue}deg)" decoding="async">${phase === 'new' ? '<b class="mon-q">?</b>' : ''}${phase === 'sealed' ? SEAL_OVERLAY : ''}</span>`;
+  return `<span class="mon-wrap mon-${phase}${angry ? ' angry' : ''}" style="width:${size}px;height:${size}px;--md:${delay}s"><img src="${monsterSrc(fam, form)}" alt="" width="${size}" height="${size}" style="filter:hue-rotate(${hue}deg)" decoding="async">${phase === 'new' ? '<b class="mon-q">?</b>' : ''}${phase === 'sealed' ? SEAL_OVERLAY : ''}${angry && phase !== 'sealed' ? '<b class="mon-angry" title="Angry: you retreated from it">😠</b>' : ''}</span>`;
 }
 /** Exam Boss of a family (gate guardian). */
 export function examBoss(fam, { size = 150, locked = false, belt = '' } = {}) {

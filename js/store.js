@@ -125,8 +125,13 @@ export async function loadDojo(userId) {
     run(sb.from('boss_defeats').select('chapter_id, first_defeated_at, best_accuracy').eq('user_id', userId)),
     run(sb.from('rank_exams').select('rank, score, passed, taken_at').eq('user_id', userId).order('taken_at', { ascending: false }).limit(20)).catch(() => []),
   ]);
-  return { beaten: Object.fromEntries((beaten || []).map(b => [b.chapter_id, b])), exams: exams || [] };
+  const rt = await myRetreats(userId).catch(() => null);
+  return { beaten: Object.fromEntries((beaten || []).map(b => [b.chapter_id, b])), exams: exams || [], angry: rt?.angry || [] };
 }
+/** v2.5.0 Retreat rules (server applies the XP cost in abandon_attempt / abandon_stale_attempts). */
+export async function retreatPreview() { return run(sb.rpc('retreat_preview')); }
+export async function myRetreats(userId) { return run(sb.rpc('my_retreats', { p_user: userId || null })); }
+export async function markRetreatsSeen() { try { await run(sb.rpc('mark_retreats_seen')); } catch { /* best effort */ } }
 export async function startRankExam() {
   const data = await run(sb.rpc('start_rank_exam'));
   cacheAttempt(data);
