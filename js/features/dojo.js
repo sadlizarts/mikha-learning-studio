@@ -215,6 +215,7 @@ export async function renderDojo() {
       </div>
     </button>
     ${missionRow(d)}
+    <button class="nd-card dj-dex" data-nav="#/dex"><span class="ic">📖</span><div class="grow"><b>Monster Dex</b><span class="nd-sub">Collect a card for every boss you seal</span></div><b class="num">${bosses.filter(b => b.beaten).length}/${bosses.length}</b><span aria-hidden="true">›</span></button>
     ${gateCard(d)}
     ${targets.length ? `<div><div class="nd-sec"><div class="nd-h2">Priority hunt</div><button class="nd-link" data-nav="#/bosses">All bosses →</button></div>
       <div class="targets">${targets.map(bossCard).join('')}</div></div>` : ''}

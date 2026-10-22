@@ -84,8 +84,34 @@ function pendingRound() {
   for (let r = 0; r < S.rounds; r++) if (!S.claimed.has(r) && roundQs(r).every(q => q.answer)) return r;
   return null;
 }
+const BLITZ_MS = 60000;
+let blitzT = null;
+const livesLeft = () => 3 - S.qs.filter(q => q.answer && !q.answer.is_correct).length;
+function blitzTick() {
+  if (!S || S.mode !== 'blitz' || !document.getElementById('s-quiz')?.classList.contains('active')) { clearInterval(blitzT); return; }
+  const left = Math.max(0, S.blitzEnd - Date.now());
+  drawRounds();
+  if (left <= 0 && !S.over) {
+    S.over = true; S.locked = true; clearInterval(blitzT);
+    $$('.opt').forEach(o => { o.disabled = true; });
+    sfx.round(1);
+    const w = document.createElement('div'); w.className = 'rclear nd'; w.innerHTML = `<div class="rc-in"><div class="rc-t">TIME UP!</div><div class="rc-sub num">${S.qs.filter(q => q.answer?.is_correct).length} correct in 60 seconds</div></div>`;
+    $('#app').appendChild(w);
+    setTimeout(() => { w.remove(); S.over = false; finish(); }, 1600);
+  }
+}
 function drawRounds() {
   const el = $('#rhud'); if (!el) return;
+  if (S?.mode === 'blitz') {
+    const left = Math.max(0, S.blitzEnd - Date.now()), s = Math.ceil(left / 1000);
+    el.innerHTML = `<span class="nd-label blitzt ${s <= 10 ? 'hot' : ''}">⚡ 0:${String(s).padStart(2, '0')}</span><span class="rsegs"><i style="--p:${Math.round(100 * left / BLITZ_MS)}%"></i></span><span class="nd-label num">✓ ${S.qs.filter(q => q.answer?.is_correct).length}</span>`;
+    el.hidden = false; return;
+  }
+  if (S?.mode === 'rage') {
+    const l = livesLeft();
+    el.innerHTML = `<span class="nd-label">💢 Rage</span><span class="hearts">${[0, 1, 2].map(i => `<i class="${i < l ? 'on' : ''}">❤</i>`).join('')}</span><span class="nd-label num">${S.qs.filter(q => q.answer).length}/${S.qs.length}</span>`;
+    el.hidden = false; return;
+  }
   if (!S?.rounds) { el.hidden = true; return; }
   const cur = Math.min(S.rounds - 1, roundOf(S.i));
   el.innerHTML = `<span class="nd-label">Round ${cur + 1} of ${S.rounds}</span><span class="rsegs">${Array.from({ length: S.rounds }, (_, r) => {
@@ -183,21 +209,33 @@ export async function renderQuiz(id) {
   loadProgress().then(p => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(p?.rank || 0)})`; }).catch(() => { $('#mk-quiz').style.backgroundImage = `url(${STAGE_ART(0)})`; });
   const mine = S;
   lessonsMeta().then(x => { mine.lidx = x; }).catch(() => { /* Read links just stay hidden */ });
-  S.rounds = !data.attempt.exam_rank && S.qs.length >= 10 ? Math.ceil(S.qs.length / 10) : 0;   // v3.1: rounds of 10
+  S.mode = data.attempt.mode || 'normal';                                  // v3.2: normal | blitz | rage | revenge
+  S.rounds = S.mode === 'normal' && !data.attempt.exam_rank && S.qs.length >= 10 ? Math.ceil(S.qs.length / 10) : 0;   // v3.1: rounds of 10
   S.claimed = new Set(); S.chests = [];
   drawMute();
+  clearInterval(blitzT);
+  if (S.mode === 'blitz') {
+    const k = 'mls_blitz_' + id; let end = +(localStorage.getItem(k) || 0);
+    if (!end) { end = Date.now() + BLITZ_MS; try { localStorage.setItem(k, end); } catch { /* private mode */ } }
+    S.blitzEnd = end;
+    if (Date.now() >= end) { finish(); return; }
+    blitzT = setInterval(blitzTick, 250);
+  }
   const open = firstOpen();
-  if (open === -1) { finish(); return; }
+  if (open === -1 || (S.mode === 'rage' && livesLeft() <= 0)) { finish(); return; }
   S.i = open;
   $('#progwrap').setAttribute('aria-valuemax', S.qs.length);
   const eb = $('#exambanner'), er = data.attempt.exam_rank;
-  eb.hidden = !er;
+  eb.hidden = !er && S.mode === 'normal';
+  if (!er && S.mode !== 'normal') eb.innerHTML = S.mode === 'blitz' ? '⚡ <b>Blitz</b> <span>60 seconds. Answer fast, no hints. Does not change boss accuracy.</span>'
+    : S.mode === 'rage' ? '💢 <b>Rage</b> <span>3 lives. 3 wrong answers = game over. Survive all 15 for +30 XP!</span>'
+    : '🔁 <b>Revenge</b> <span>These beat you before. Get one right and it is avenged for good. +12 XP each.</span>';
   if (er) {
     let pass = 85; try { pass = +(await catalog()).rules?.exam_pass || 85; } catch { /* default */ }
     eb.innerHTML = `🥋 <b>Rank exam · ${esc((RANKS[er] || {}).name || '')}</b> <span>Pass with ${pass}% or more</span>`;
   }
   S.intel = {}; S.shield = null;
-  if (!er) intelCharges(viewerId()).then(ch => {                       // v3.0 Boss Intel buffs for the chapters in this battle
+  if (!er && S.mode === 'normal') intelCharges(viewerId()).then(ch => {                       // v3.0 Boss Intel buffs for the chapters in this battle
     if (S !== mine) return;
     for (const id of data.attempt.chapter_ids || []) if (ch[id]) S.intel[id] = ch[id];
     const lv = Math.max(0, ...Object.values(S.intel));
@@ -205,7 +243,7 @@ export async function renderQuiz(id) {
     drawBuffs(); $('#arena').dataset.foe = ''; if (!S.locked) drawArena(qAt());
   }).catch(() => { /* buffs are optional */ });
   const bl = $('#benchline'); bl.hidden = true; bl.innerHTML = '';
-  if (!er && !S.qs.some(x => x.answer)) loadReports().then(r => {           // v2.9: remind the report-card benchmark before the first strike
+  if (!er && S.mode === 'normal' && !S.qs.some(x => x.answer)) loadReports().then(r => {           // v2.9: remind the report-card benchmark before the first strike
     if (S !== mine || S.qs.some(x => x.answer)) return;
     const bms = benchmarks(r), seen = new Map();
     for (const q of S.qs) { const sub = S.idx[q.chapter_id]?.subject; if (sub && !seen.has(sub.id)) seen.set(sub.id, sub); }
@@ -258,7 +296,7 @@ function renderQ() {
   $('#hints').innerHTML = '';
   const hints = (q.hints || []).filter(Boolean);
   const hb = $('#hintbtn');
-  hb.hidden = hints.length === 0;
+  hb.hidden = hints.length === 0 || S.mode === 'blitz';
   hb.innerHTML = `${BULB} Need a hint?`;
   $('#feedback').hidden = true;
   $('#readlink').hidden = true;
@@ -333,8 +371,11 @@ async function choose(orig) {
   if (S.combo >= 3 && $('#arena').hidden) { c.textContent = `🔥 ${S.combo} in a row!`; c.hidden = false; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
   if (ok && S.combo >= 5 && S.combo % 5 === 0) surge(S.combo);
   const last = firstOpen() === -1;
-  $('#nextbtn').textContent = pendingRound() !== null ? '🏁 Round clear! →' : last ? 'See results →' : 'Next →';
+  const dead = S.mode === 'rage' && livesLeft() <= 0;
+  $('#nextbtn').textContent = dead ? '💀 Game over → results' : pendingRound() !== null ? '🏁 Round clear! →' : last ? 'See results →' : 'Next →';
   $('#feedback').hidden = false;
+  if (S.mode === 'rage' && !ok) { const ar = $('#arena'); ar.classList.remove('lifelost'); void ar.offsetWidth; ar.classList.add('lifelost'); }
+  if (S.mode === 'blitz') { $('#feedback').hidden = true; const mine = S; setTimeout(() => { if (S === mine && qAt() === q && !S.over) next(); }, ok ? 380 : 650); }
   setTimeout(() => $('#nextbtn').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'end' }), $('#arena').hidden || reducedMotion() ? 80 : 700);   // let the strike play first
 
   const attemptId = S.data.attempt.id;
@@ -351,6 +392,8 @@ function surge(n) {
 }
 
 async function next() {
+  if (S?.over) return;
+  if (S.mode === 'rage' && livesLeft() <= 0) { finish(); return; }
   const pr = pendingRound();
   if (pr !== null) { await showRound(pr); if (pendingRound() !== null) return; }
   const open = firstOpen();
@@ -359,6 +402,7 @@ async function next() {
 }
 
 async function finish() {
+  clearInterval(blitzT);
   for (let pr = pendingRound(), guard = 0; pr !== null && guard < 6; pr = pendingRound(), guard++) await showRound(pr);
   const btn = $('#nextbtn');
   btn.disabled = true; btn.textContent = 'Scoring…';

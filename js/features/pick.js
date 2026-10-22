@@ -1,6 +1,6 @@
 // Pick chapters (DESIGN §5.3, PRD FR-11..FR-13, FR-20, FR-25a, FR-27).
 import { $, $$, esc, subjectMeta, shortCode, sheet, toast } from '../ui.js';
-import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress, intelCharges } from '../store.js';
+import { startAttempt, inProgressAttempt, abandonAttempt, prefs, loadProgress, intelCharges, startMode, revengeCount } from '../store.js';
 import { lessonsMeta } from './learn.js';
 import { bossName } from '../dojo.js';
 import { app, catalog } from '../state.js';
@@ -16,6 +16,23 @@ const sel = new Set(prefs.get('lastChapters', []));
 let len = prefs.get('lastLen', 30);
 let busy = false;
 let bms = [];
+let mode = prefs.get('mode', 'normal'), revN = null;
+const MODES = {
+  normal: { ic: '⚔️', n: 'Battle', d: '30 questions · 3 rounds of 10 · chests' },
+  blitz: { ic: '⚡', n: 'Blitz', d: '60 seconds, as many as you can · 8 XP each · does not change boss accuracy' },
+  rage: { ic: '💢', n: 'Rage', d: '15 questions, 3 lives · survive for +30 XP' },
+  revenge: { ic: '🔁', n: 'Revenge', d: 'Win back questions you got wrong before · 12 XP each' },
+};
+function renderModes() {
+  if (!MODES[mode]) mode = 'normal';
+  $('#modebar').innerHTML = Object.entries(MODES).map(([k, m]) => `<button class="mode ${k === mode ? 'on' : ''}" data-mode="${k}" role="radio" aria-checked="${k === mode}"><span>${m.ic}</span>${m.n}${k === 'revenge' && revN !== null ? ` <i class="num">${revN}</i>` : ''}</button>`).join('');
+  const rev = mode === 'revenge';
+  $('#subtabs').hidden = rev; $('#chaplist').hidden = rev; $('#benchpick').hidden = rev;
+  const ri = $('#revinfo'); ri.hidden = !rev;
+  if (rev) ri.innerHTML = `<div class="nd-h2" style="font-size:18px">🔁 Revenge</div><p class="nd-sub" style="margin:4px 0 0">${revN === null ? 'Counting your old mistakes…' : revN >= 5 ? `<b class="num">${revN}</b> questions you got wrong before are waiting. Each battle brings back 10 of them. Get one right and it is avenged for good!` : `Only <b class="num">${revN}</b> mistakes to avenge (you need 5). Nice!`}</p>`;
+  document.querySelector('#s-pick .lenbar').hidden = mode !== 'normal';
+  $$('#modebar [data-mode]').forEach(b => b.onclick = () => { mode = b.dataset.mode; prefs.set('mode', mode); renderModes(); updateMeta(); });
+}
 
 const avail = (c) => c.distinct_items || 0;
 function available() {
@@ -53,6 +70,16 @@ function renderChapters() {
 
 function updateMeta() {
   const n = sel.size, t = available();
+  $('#picklab').textContent = mode === 'normal' ? 'Session length' : `${MODES[mode].ic} ${MODES[mode].n} mode`;
+  if (mode !== 'normal') {
+    const b = $('#startbtn'), M = MODES[mode];
+    $('#pickwarn').hidden = true;
+    $('#pickmeta').textContent = M.d;
+    if (mode === 'revenge') { b.disabled = busy || !(revN >= 5); b.textContent = busy ? 'Getting questions…' : revN >= 5 ? `🔁 Start Revenge (${Math.min(10, revN)}) →` : 'Not enough mistakes yet'; return; }
+    b.disabled = n === 0 || t < 10 || busy;
+    b.textContent = busy ? 'Getting questions…' : n === 0 ? 'Pick at least one chapter' : t < 10 ? 'Not enough questions yet' : mode === 'blitz' ? '⚡ Start Blitz · 60 s →' : '💢 Start Rage · 3 lives →';
+    return;
+  }
   $('#pickmeta').textContent = `${n} chapter${n === 1 ? '' : 's'} · ${t} questions available`;
   const fifty = $('[data-len="50"]');
   fifty.disabled = n > 0 && t < 50;
@@ -94,14 +121,15 @@ async function scoutPrompt(ids) {
 async function start() {
   if (busy) return;
   const ids = cat.chapters.filter(c => sel.has(c.chapter_id)).map(c => c.chapter_id);
-  const scout = await scoutPrompt(ids);
+  const go = () => mode === 'normal' ? startAttempt(ids, len) : startMode(mode, mode === 'revenge' ? null : ids);
+  const scout = mode === 'normal' ? await scoutPrompt(ids) : false;
   if (scout === null) return;
   if (scout) { prefs.set('lastChapters', ids); navigate(`#/intel/${scout}/read`); return; }
   busy = true; updateMeta();
   try {
     let data;
     try {
-      data = await startAttempt(ids, len);
+      data = await go();
     } catch (e) {
       if (e.code !== 'in_progress') throw e;
       const ip = await inProgressAttempt(app.user.id);
@@ -113,7 +141,7 @@ async function start() {
       if (choice === 'continue' && ip) { navigate(`#/quiz/${ip.id}`); return; }
       if (choice !== 'fresh') return;
       if (ip && !(await confirmRetreat(ip))) return;
-      data = await startAttempt(ids, len);
+      data = await go();
     }
     prefs.set('lastChapters', ids);
     navigate(`#/quiz/${data.attempt.id}`);
@@ -149,6 +177,7 @@ export async function renderPick(arg) {
     }
     history.replaceState(null, '', '#/pick');
   }
+  if (preset) mode = 'normal';   // a chapter link (Intel, Learn, Progress) always opens a normal battle
   // drop remembered chapters that no longer exist or are empty
   for (const id of [...sel]) { const c = cat.chapters.find(x => x.chapter_id === id); if (!c || !avail(c)) sel.delete(id); }
   if (!curSub || !cat.subjects.some(s => s.id === curSub)) {
@@ -157,7 +186,8 @@ export async function renderPick(arg) {
   }
   if (wantLen === '50' || wantLen === '30') len = +wantLen;
   setLen(len);
-  renderSubtabs(); renderChapters();
+  renderSubtabs(); renderChapters(); renderModes(); updateMeta();
+  revengeCount().then(n => { revN = n; renderModes(); updateMeta(); }).catch(() => { revN = 0; renderModes(); updateMeta(); });
   loadReports().then(r => { bms = benchmarks(r); if (cat) renderSubtabs(); }).catch(() => { /* banner is optional */ });
 }
 

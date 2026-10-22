@@ -177,7 +177,7 @@ export async function renderHome() {
     ${rtCard}
     <div class="hgrid">
     <div class="hmain">
-    ${hi(resumeNd, 1)}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
+    ${hi(resumeNd, 1)}${viewing ? '' : '<div class="hitem" style="order:2" id="questslot"></div>'}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
     <div class="hitem" style="order:10">
       <div class="nd-sec"><div class="nd-h2">Recent battles</div>${done.length ? '<button class="nd-link" data-nav="#/history">All ›</button>' : ''}</div>
       <div class="recent">${done.length ? done.slice(0, 3).map(a => recRow(a, idx)).join('') :
@@ -196,6 +196,7 @@ export async function renderHome() {
   </div>`;
   body.dataset.ready = '1';
   bindHomeDojo(body, dd);
+  if (!viewing) import('../quests.js').then(m => m.mountQuests($('#questslot'))).catch(() => { /* quests are optional */ });
   if (viewing) import('./admin/overview.js').then(async m => {   // Dad's view: the admin "Perlu perhatian" summary on top (v2.7.0)
     const o = await m.overviewData(); const el = document.createElement('div'); el.className = 'hm-dad';
     el.innerHTML = m.attentionCard(m.attentionItems(o), { title: 'Perlu perhatian · untuk Dad' }) + '<button class="nd-link" data-nav="#/admin/overview" style="margin-top:6px">Buka dashboard admin ›</button>';

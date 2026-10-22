@@ -99,11 +99,14 @@ export async function renderResult(id, { fresh }) {
       <div class="band ${bcls}">${btxt}</div>
     </div>
     <div class="kv">
-      <div><div class="v num">${correct}/${qs.length}</div><div class="l">Correct</div></div>
+      <div><div class="v num">${correct}/${['blitz', 'rage'].includes(a.mode) ? answered.length : qs.length}</div><div class="l">Correct</div></div>
       <div><div class="v num">${fmtDur(a.duration_s)}</div><div class="l">Time</div></div>
       <div><div class="v num">${hintsUsed}</div><div class="l">Hints used</div></div>
     </div>
     <div class="xpgain"><span aria-hidden="true" style="font-size:22px">⚡</span><div class="grow">XP earned${done?.counters || done?.intel_xp || done?.round_xp ? `<div style="font-size:12px;font-weight:800;opacity:.8">incl. ${[done.counters ? `${done.counters} counter strike${done.counters === 1 ? '' : 's'} (+${done.counters * 5})` : '', done.intel_xp ? `✨ Intel bonus (+${done.intel_xp})` : '', done.round_xp ? `⭐ round stars (+${done.round_xp})` : ''].filter(Boolean).join(' · ')}</div>` : ''}</div><b class="num">+${xp}</b></div>
+    ${a.mode && a.mode !== 'normal' ? `<div class="panel mode-res m-${esc(a.mode)}">${a.mode === 'blitz' ? `⚡ <b>Blitz</b> <span>${correct} correct in 60 seconds (${answered.length} answered). Blitz never changes boss accuracy.</span>`
+      : a.mode === 'rage' ? (answered.length - correct >= 3 ? `💀 <b>Rage: game over</b> <span>${correct} correct before your 3 lives ran out.</span>` : `💢 <b>Rage survived!</b> <span>${correct}/${answered.length} with lives left · +30 XP survivor bonus.</span>`)
+      : `🔁 <b>Revenge</b> <span>${correct} of ${answered.length} old mistakes avenged.</span>`}</div>` : ''}
     ${levelUp}
     ${done?.chests?.length ? `<div class="panel rs-chests"><div class="eyebrow" style="margin-bottom:8px">Chest loot this session</div>${done.chests.map(c => `<div class="rs-ch r-${esc(c.rarity)}"><span class="rr">${esc(c.rarity)}</span><b>${esc(c.item?.name || '')}</b><span class="note">${c.duplicate ? '+1 shard' : esc({ aura: 'Aura', title: 'Title', frame: 'Frame' }[c.item?.kind] || '')}</span></div>`).join('')}<button class="btn small block" data-nav="#/hero" style="margin-top:8px">Equip in Hero →</button></div>` : ''}
     ${examHtml}${notes}
