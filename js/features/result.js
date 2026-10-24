@@ -1,5 +1,5 @@
 // Result (DESIGN §5.5) — also the read-only session detail opened from History.
-import { rich, $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reducedMotion } from '../ui.js';
+import { rich, $, esc, band, fmtDur, subjectMeta, shortCode, toast, levelInfo, reducedMotion, clock, spanMin } from '../ui.js';
 import { getAttempt, startAttempt, loadDojo, loadProgress } from '../store.js';
 import { dojoFrom, openBoss } from './dojo.js';
 import { monsterSVG, phaseOf } from '../monsters.js';
@@ -97,6 +97,7 @@ export async function renderResult(id, { fresh }) {
       <div class="eyebrow" style="position:relative">${fresh ? 'Practice complete' : esc(new Date(a.finished_at).toLocaleString('en-GB', { timeZone: 'Asia/Jakarta', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</div>
       <div class="scorebig num" id="scorebig">${score}<small>/100</small></div>
       <div class="band ${bcls}">${btxt}</div>
+      <div class="rs-clock num">🕒 Started ${clock(a.started_at)}${a.finished_at ? ` · finished ${clock(a.finished_at)}${spanMin(a.started_at, a.finished_at) ? ` (${spanMin(a.started_at, a.finished_at)} min)` : ''}` : ''}</div>
     </div>
     <div class="kv">
       <div><div class="v num">${correct}/${['blitz', 'rage'].includes(a.mode) ? answered.length : qs.length}</div><div class="l">Correct</div></div>

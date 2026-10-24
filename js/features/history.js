@@ -1,5 +1,5 @@
 // History (v2.6.0 Night Dojo "Battle log"): every finished practice and every Retreat, grouped by day; tap a battle for its result.
-import { $, esc, scoreCls, fmtDur, jakartaDate, shortDay, fmtNum } from '../ui.js';
+import { $, esc, scoreCls, fmtDur, jakartaDate, shortDay, fmtNum, clock, spanMin } from '../ui.js';
 import { completedAttempts, retreatLog } from '../store.js';
 import { catalog, chapterIndex, viewerId } from '../state.js';
 import { show } from '../router.js';
@@ -32,12 +32,12 @@ export async function renderHistory() {
       if (it.a) {
         const a = it.a, first = (a.chapter_ids || [])[0];
         html += `<button class="hs-row" data-nav="#/session/${a.id}"><div class="hs-mon">${thumb(first)}</div>
-          <div class="grow" style="min-width:0"><div class="t">${esc(chaptersLabel(a.chapter_ids, idx))}</div><div class="nd-sub num" style="font-size:12px">${a.total_questions} questions${a.duration_s ? ` · ${esc(fmtDur(a.duration_s))}` : ''}${a.xp_earned ? ` · <span style="color:var(--nd-gold)">+${a.xp_earned} XP</span>` : ''}</div></div>
+          <div class="grow" style="min-width:0"><div class="t">${esc(chaptersLabel(a.chapter_ids, idx))}</div><div class="nd-sub num" style="font-size:12px">🕒 ${clock(a.started_at)}–${clock(a.finished_at)}${spanMin(a.started_at, a.finished_at) ? ` (${spanMin(a.started_at, a.finished_at)} min)` : ''} · ${a.mode && a.mode !== 'normal' ? `${{ blitz: '⚡ Blitz', rage: '💢 Rage', revenge: '🔁 Revenge' }[a.mode] || ''} · ` : ''}${a.total_questions} q${a.xp_earned ? ` · <span style="color:var(--nd-gold)">+${a.xp_earned} XP</span>` : ''}</div></div>
           <div class="score-pill num ${scoreCls(a.score)}">${a.score}</div></button>`;
       } else {
         const r = it.r;
         html += `<div class="hs-row retreat"><div class="hs-mon"><span class="hs-flag" aria-hidden="true">🏳️</span></div>
-          <div class="grow" style="min-width:0"><div class="t">${r.auto ? 'Left for 24 hours' : `Retreat #${r.nth}`} · ${esc(chaptersLabel(r.chapter_ids, idx))}</div><div class="nd-sub" style="font-size:12px">${r.rank_after < r.rank_before ? 'Belt dropped · ' : ''}monster got angry</div></div>
+          <div class="grow" style="min-width:0"><div class="t">${r.auto ? 'Left for 24 hours' : `Retreat #${r.nth}`} · ${esc(chaptersLabel(r.chapter_ids, idx))}</div><div class="nd-sub num" style="font-size:12px">${r.attempts?.started_at ? `🕒 ${clock(r.attempts.started_at)}–${clock(r.created_at)} · ${r.attempts.answered_count}/${r.attempts.total_questions} answered · ` : `🕒 left ${clock(r.created_at)} · `}${r.rank_after < r.rank_before ? 'Belt dropped · ' : ''}monster got angry</div></div>
           <b class="hs-loss num">−${r.xp_lost}</b></div>`;
       }
     }

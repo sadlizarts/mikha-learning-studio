@@ -34,7 +34,11 @@ export function dojoFrom(cat, prog, dj, viewing = !!app.viewAs) {
   const order = Object.fromEntries(cat.chapters.map((c, i) => [c.chapter_id, i]));
   bosses.sort((a, b) => order[a.ch.chapter_id] - order[b.ch.chapter_id]);
   const beatNow = bosses.filter(b => b.st.beatNow).length;
-  const rk = rankInfo(prog?.rank || 0, beatNow, R);
+  // v3.3 belt path: a boss counts for the belt once sealed and while it stays at or above the revive line; archived chapters only count when earned
+  bosses.forEach(b => { b.counts = !!b.beaten && b.st.n >= R.min && b.st.acc >= R.revive; b.archived = !!b.ch.belt_archived; });
+  const counted = bosses.filter(b => b.counts).length;
+  const active = bosses.filter(b => !b.archived || b.counts).length;
+  const rk = rankInfo(prog?.rank || 0, counted, R, active);
   const today = jakartaDate();
   const triedToday = (dj.exams || []).some(e => e.rank === rk.rank + 1 && jakartaDate(e.taken_at) === today);
   return { cat, prog, dj, R, idx, bosses, beatNow, rk, triedToday, viewing };
@@ -66,7 +70,7 @@ export function rankPanel(d, { compact = false } = {}) {
     ? (rk.ready ? `Exam for <b>${esc(rk.next.name)}</b> is open: 30 questions from your sealed bosses, pass ≥ ${R.pass}%.`
       : `Seal <b class="num">${rk.need - rk.have}</b> more boss${rk.need - rk.have === 1 ? '' : 'es'} to unlock the <b>${esc(rk.next.name)}</b> exam.`)
     : 'Top rank. Keep every seal strong!';
-  const bar = rk.next ? `<div class="kibar rankbar"><i style="--p:${Math.min(100, Math.round(100 * rk.have / rk.need))}%"></i></div><div class="note num" style="margin-top:4px">${rk.have}/${rk.need} bosses sealed</div>` : '';
+  const bar = rk.next ? `<div class="kibar rankbar"><i style="--p:${Math.min(100, Math.round(100 * rk.have / rk.need))}%"></i></div><div class="note num" style="margin-top:4px">${rk.have}/${rk.need} bosses sealed${rk.active != null ? ` · ${rk.active} active chapters` : ''}</div>` : '';
   const btn = !viewing && rk.ready ? (triedToday ? '<p class="note" style="margin-top:8px">You tried the exam today. Train and try again tomorrow!</p>'
     : `<button class="btn primary block" style="margin-top:10px" id="exambtn">Take the rank exam →</button>`) : '';
   return `<div class="panel rankcard" style="--belt:${rk.color}">
@@ -135,7 +139,7 @@ export function gateCard(d) {
       <p class="nd-sub" style="font-size:12px;margin-bottom:6px">${esc(gk.name)} · guards the path to ${esc(rk.next.name)}</p>
       <p class="nd-sub">${rk.ready ? `Open: 30 questions from your sealed bosses. Pass with ${R.pass}% to evolve.` : `Seal ${rk.need - rk.have} more boss${rk.need - rk.have === 1 ? '' : 'es'} to open this gate.`}</p>
       <div class="nd-bar" style="margin-top:10px"><i style="--p:${pct}%;--bc:linear-gradient(90deg,${rk.next.color === '#F4F1EA' ? '#fff' : rk.next.color},#FFD25A)"></i></div>
-      <div class="nd-sub nd-num" style="margin-top:4px;font-size:12px">${rk.have}/${rk.need} sealed</div>${action}</div>
+      <div class="nd-sub nd-num" style="margin-top:4px;font-size:12px">${rk.have}/${rk.need} sealed${rk.active != null ? ` · based on ${rk.active} active chapters` : ''}</div>${action}</div>
   </div>`;
 }
 
@@ -179,7 +183,7 @@ export function bindExam(root, d) {
   if (!eb) return;
   const { R } = d;
   eb.onclick = async () => {
-    const ok = await sheet({ title: `Gate challenge · ${d.rk.next.name}`, body: `<p>30 questions mixed from your <b>${d.beatNow}</b> sealed bosses. Pass with <b>${R.pass}%</b> or more to become <b>${esc(d.rk.next.name)}</b> (${esc(d.rk.next.belt)}).</p><p class="note" style="margin-top:8px">One try per day. Hints are allowed. If you leave halfway, today's try is used.</p>`,
+    const ok = await sheet({ title: `Gate challenge · ${d.rk.next.name}`, body: `<p>30 questions mixed from your <b>${d.rk.have}</b> sealed bosses. Pass with <b>${R.pass}%</b> or more to become <b>${esc(d.rk.next.name)}</b> (${esc(d.rk.next.belt)}).</p><p class="note" style="margin-top:8px">One try per day. Hints are allowed. If you leave halfway, today's try is used.</p>`,
       actions: [{ label: 'Not yet', value: false }, { label: 'Start exam →', value: true, cls: 'primary' }] });
     if (!ok) return;
     eb.disabled = true; eb.textContent = 'Opening the gate…';
