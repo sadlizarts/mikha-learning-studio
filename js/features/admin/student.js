@@ -1,5 +1,5 @@
 // Admin → Student dashboard (FR-60, FR-62).
-import { $, $$, esc, fmtNum, fmtDur, levelInfo, jakartaDate, shortDay, scoreCls, trendSVG } from '../../ui.js';
+import { $, $$, esc, fmtNum, fmtDur, levelInfo, jakartaDate, shortDay, scoreCls, trendSVG, clock, spanMin } from '../../ui.js';
 import { admin, myRetreats } from '../../store.js';
 import { catalog, chapterIndex } from '../../state.js';
 import { chapterLabel, qTags, openEditor } from './common.js';
@@ -54,11 +54,11 @@ export async function renderStudent(body) {
         <td class="r num">${r.read_count}</td><td class="num">${esc(shortDay(r.last_read_at))}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No lesson finished yet.</p>'}
     </div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Sessions</div>
-      ${shown.length ? `<table class="tbl"><thead><tr><th>When</th><th>Chapters</th><th class="r">Score</th><th class="r">Time</th></tr></thead><tbody>${shown.map(a => `<tr data-s="${a.id}" style="cursor:pointer">
-        <td class="num">${esc(shortDay(a.finished_at || a.started_at))}</td>
+      ${shown.length ? `<table class="tbl"><thead><tr><th>Mulai</th><th>Bab</th><th class="r">Skor</th><th class="r">Durasi</th></tr></thead><tbody>${shown.map(a => `<tr data-s="${a.id}" style="cursor:pointer">
+        <td class="num" style="white-space:nowrap">${esc(shortDay(a.started_at))}<br><b>${clock(a.started_at)}</b>–${a.finished_at ? clock(a.finished_at) : '…'}</td>
         <td>${esc(chaptersLabel(a.chapter_ids, idx))}</td>
         <td class="r num">${a.status === 'completed' ? `<span class="tag ${scoreCls(a.score) === 'good' ? 'ok' : scoreCls(a.score) === 'low' ? 'bad' : 'warn'}">${a.score}</span>` : `<span class="tag mute">${esc(a.status)} ${a.answered_count}/${a.total_questions}</span>`}</td>
-        <td class="r num">${a.duration_s ? fmtDur(a.duration_s) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No sessions yet.</p>'}
+        <td class="r num">${spanMin(a.started_at, a.finished_at) ? `${spanMin(a.started_at, a.finished_at)} mnt` : '—'}${a.duration_s ? `<br><span class="note">jawab ${fmtDur(a.duration_s)}</span>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="note">No sessions yet.</p>'}
       ${hidden ? `<p class="note" style="margin-top:6px">${hidden} unfinished session${hidden > 1 ? 's' : ''} hidden${HIDE < 1000 ? ` (fewer than ${HIDE} answers)` : ''}. Their answers still count in the chapter stats and the Subjects tab.</p>` : ''}
     </div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Most missed questions</div>

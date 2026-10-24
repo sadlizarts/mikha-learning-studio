@@ -1,5 +1,7 @@
 // Admin → Dojo (v1.8.1): the student's rank, today's Ki, exam history and every boss/card in one table.
-import { esc, subjectMeta, shortCode, shortDay } from '../../ui.js';
+import { esc, subjectMeta, shortCode, shortDay, toast } from '../../ui.js';
+import { admin } from '../../store.js';
+import { catalog } from '../../state.js';
 import { app } from '../../state.js';
 import { dojoData, rankPanel, kiPanel } from '../dojo.js';
 import { bossSVG, cardTier, TIER_LABEL, RANKS } from '../../dojo.js';
@@ -23,20 +25,21 @@ export async function renderDojoAdmin(body) {
   const bySub = cat.subjects.map(s => {
     const m = subjectMeta(s);
     const list = bosses.filter(b => b.ch.subject_id === s.id).sort((a, b) => ORDER[a.st.status] - ORDER[b.st.status] || a.ch.sort_order - b.ch.sort_order);
-    const sealed = list.filter(b => b.st.beatNow).length;
+    const sealed = list.filter(b => b.st.beatNow).length, arch = list.filter(b => b.archived).length;
     const rows = list.map(b => {
       const [l, c] = LABEL[b.st.status];
       const hp = b.st.status === 'defeated' ? 0 : b.st.hp;
       return `<div class="adb-row">
         <div class="adb-mon">${bossSVG(b.ch, m.color, { state: b.st.status === 'defeated' ? 'defeated' : b.st.status === 'new' ? 'new' : 'fight', size: 44 })}</div>
-        <div class="adb-main"><div class="adb-top"><b>${esc(shortCode(b.ch.code))} ${esc(b.ch.name)}</b><span class="chip" style="--c:${c}"><span class="dot"></span>${l}</span></div>
+        <div class="adb-main"><div class="adb-top"><b>${esc(shortCode(b.ch.code))} ${esc(b.ch.name)}</b><span class="chip" style="--c:${c}"><span class="dot"></span>${l}</span>${b.archived ? '<span class="chip" style="--c:#8E86B0"><span class="dot"></span>Arsip</span>' : ''}${b.counts ? '<span class="chip" style="--c:#0ca30c"><span class="dot"></span>Dihitung sabuk</span>' : ''}</div>
           <div class="adb-sub">${esc(b.name)} · ${esc(b.title)}</div>
           <div class="adb-hp"><div class="hp"><i style="--p:${hp}%"></i></div><span class="num">HP ${hp}%</span></div>
-          <div class="adb-meta num"><span>30 terakhir: <b>${b.st.n ? b.st.acc + '%' : '—'}</b></span><span>${b.st.n || 0} jawaban</span><span>${b.beaten ? `Kartu ${TIER_LABEL[cardTier(b.beaten.best_accuracy)]} · ${b.beaten.best_accuracy}%` : 'Belum ada kartu'}</span></div></div>
+          <div class="adb-meta num"><span>30 terakhir: <b>${b.st.n ? b.st.acc + '%' : '—'}</b></span><span>${b.st.n || 0} jawaban</span><span>${b.beaten ? `Kartu ${TIER_LABEL[cardTier(b.beaten.best_accuracy)]} · ${b.beaten.best_accuracy}%` : 'Belum ada kartu'}</span>
+            <button class="btn small ${b.archived ? '' : 'ghost'}" data-arch="${b.ch.chapter_id}" data-v="${b.archived ? 0 : 1}" style="margin-left:auto">${b.archived ? '↩ Aktifkan lagi' : '📦 Arsipkan'}</button></div></div>
       </div>`;
     }).join('');
     return `<div class="panel" style="border-left:4px solid ${m.color}">
-      <div class="row between"><h3>${esc(m.short)}</h3><span class="note num">${sealed}/${list.length} tersegel</span></div>
+      <div class="row between"><h3>${esc(m.short)}</h3><span class="note num">${sealed}/${list.length} tersegel${arch ? ` · ${arch} arsip` : ''}</span></div>
       <details ${list.some(b => ['revived', 'cracked'].includes(b.st.status)) ? 'open' : ''} style="margin-top:6px"><summary class="note" style="cursor:pointer;font-weight:900">Boss (${list.length})</summary>
         <div class="adb-list">${rows}</div>
       </details></div>`;
@@ -51,8 +54,16 @@ export async function renderDojoAdmin(body) {
       <div><div class="v num">${prog?.current_streak || 0}</div><div class="l">Streak · shield ${esc(shield)}</div></div>
       <div><div class="v num">${prog?.answers_today || 0}</div><div class="l">Answers today · XP cap ${R.cap}</div></div>
     </div>
+    <div class="panel"><div class="eyebrow" style="margin-bottom:6px">Jalur sabuk</div>
+      <p style="margin:0"><b>${d.rk.next ? `Ujian ${esc(d.rk.next.belt)}: ${d.rk.have}/${d.rk.need} boss dihitung${d.rk.ready ? ' · <span style="color:var(--ok)">SUDAH TERBUKA</span>' : ''}` : 'Sabuk tertinggi'}</b></p>
+      <p class="note" style="margin:4px 0 0">Bab aktif: <b>${d.rk.active}</b> dari ${bosses.length} (${bosses.filter(b => b.archived).length} diarsipkan). Syarat = ${R.pct.map((p, i) => `${esc(RANKS[i + 1]?.belt.replace(' belt', '') || '')} ${p}%`).join(' · ')} dari bab aktif (min 3, tidak pernah lebih berat dari ${R.need.join('/')}). Boss dihitung kalau pernah tersegel dan 30 jawaban terakhir masih ≥${R.revive}%. Bab arsip tidak wajib, tapi kalau tersegel tetap dihitung.</p></div>
     <div class="panel"><div class="eyebrow" style="margin-bottom:8px">Rank exams</div>${exams}</div>
     ${bySub}
     <p class="note">Sealed = at least ${R.min} answers and ${R.win}% or more on the last 30. "Came back" = it was sealed before but fell below ${R.revive}%. A card stays once earned; its tier follows the best accuracy.</p>
   </div>`;
+  body.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await admin.setBeltArchived(b.dataset.arch, b.dataset.v === '1'); await catalog(true); toast(b.dataset.v === '1' ? 'Bab diarsipkan dari jalur sabuk' : 'Bab aktif lagi', 1800); renderDojoAdmin(body); }
+    catch (e) { toast(e.message, 2600); b.disabled = false; }
+  });
 }
