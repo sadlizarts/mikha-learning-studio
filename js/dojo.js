@@ -17,10 +17,12 @@ export const RANKS = [
 export function rules(cat) {
   const R = cat?.rules || {};
   let need = R.rank_bosses; if (typeof need === 'string') try { need = JSON.parse(need); } catch { need = null; }
+  let pct = R.rank_pct; if (typeof pct === 'string') try { pct = JSON.parse(pct); } catch { pct = null; }
   return {
     min: +R.min_answered || 15, win: +R.boss_threshold || 80, revive: +R.boss_revive_below || 70,
     target: +R.daily_target || 30, cap: +R.daily_cap || 90, pass: +R.exam_pass || 85,
     need: Array.isArray(need) && need.length ? need.map(Number) : [3, 6, 10, 15, 22, 30, 40],
+    pct: Array.isArray(pct) && pct.length ? pct.map(Number) : [10, 20, 30, 45, 60, 75, 90],
   };
 }
 
@@ -72,10 +74,13 @@ export function bossState(stat, beatenEver, R) {
 export const cardTier = (best) => best >= 95 ? 'gold' : best >= 90 ? 'silver' : 'bronze';
 export const TIER_LABEL = { gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
 
-export function rankInfo(rank, beatNow, R) {
+/** v3.3 belt path: bosses needed for the next rank = max(3, min(fixed number, pct × active chapters)).
+ *  active = chapters not in the belt archive + archived ones that already count. `have` = counted bosses (sealed once, still ≥ revive line). */
+export function rankInfo(rank, have, R, active = null) {
   const r = Math.max(0, Math.min(RANKS.length - 1, rank || 0));
-  const need = R.need[r];  // bosses needed to open the exam for rank r+1
-  return { rank: r, ...RANKS[r], next: RANKS[r + 1] || null, need: need ?? null, have: beatNow, ready: need != null && beatNow >= need };
+  const fixed = R.need[r];
+  const need = fixed == null ? null : active == null ? fixed : Math.max(3, Math.min(fixed, Math.ceil((R.pct?.[r] ?? 100) * active / 100)));
+  return { rank: r, ...RANKS[r], next: RANKS[r + 1] || null, need, have, active, ready: need != null && have >= need };
 }
 
 /* ---------- pictures (original SVG, generated) ---------- */

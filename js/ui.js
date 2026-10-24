@@ -83,6 +83,10 @@ export const shortCode = (code) => String(code || '').split('-').pop();
 const TZ = 'Asia/Jakarta';
 export const jakartaDate = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(d));
 export const prettyDay = (d = new Date()) => new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(d));
+/** 'HH:MM' in Jakarta time (v3.2.1: start times on History, Result, admin). */
+export const clock = (d) => d ? new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(d)) : '—';
+/** wall-clock minutes between two timestamps */
+export const spanMin = (a, b) => (a && b) ? Math.max(1, Math.round((new Date(b) - new Date(a)) / 60000)) : null;
 export const shortDay = (d) => new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(d));
 export const fmtDur = (s) => { s = Math.max(0, Math.round(s || 0)); const m = Math.floor(s / 60); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
 export const fmtNum = (n) => new Intl.NumberFormat('en-US').format(n || 0);

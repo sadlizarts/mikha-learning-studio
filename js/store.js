@@ -92,7 +92,7 @@ export async function loadProfile(userId) {
 export async function loadCatalog(userId) {
   const [subjects, chapters, stats, settings] = await Promise.all([
     run(sb.from('subjects').select('id, name, color, language, sort_order').eq('is_active', true).order('sort_order')),
-    run(sb.from('v_chapter_counts').select('chapter_id, subject_id, code, name, sort_order, is_active, active_questions, distinct_items').eq('is_active', true).order('sort_order')),
+    run(sb.from('v_chapter_counts').select('chapter_id, subject_id, code, name, sort_order, is_active, active_questions, distinct_items, belt_archived').eq('is_active', true).order('sort_order')),
     run(sb.from('v_chapter_stats').select('chapter_id, answered, accuracy_recent, hint_rate_recent').eq('user_id', userId)),
     run(sb.from('app_settings').select('key, value')).catch(() => []),
   ]);
@@ -132,7 +132,7 @@ export async function loadDojo(userId) {
 export async function retreatPreview() { return run(sb.rpc('retreat_preview')); }
 export async function myRetreats(userId) { return run(sb.rpc('my_retreats', { p_user: userId || null })); }
 export async function retreatLog(userId, limit = 100) {
-  return run(sb.from('retreats').select('attempt_id, chapter_ids, nth, xp_lost, auto, rank_before, rank_after, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(limit));
+  return run(sb.from('retreats').select('attempt_id, chapter_ids, nth, xp_lost, auto, rank_before, rank_after, created_at, attempts(started_at, answered_count, total_questions)').eq('user_id', userId).order('created_at', { ascending: false }).limit(limit));
 }
 export async function markRetreatsSeen() { try { await run(sb.rpc('mark_retreats_seen')); } catch { /* best effort */ } }
 export async function startRankExam() {
@@ -150,7 +150,7 @@ export async function inProgressAttempt(userId) {
   return rows[0] || null;
 }
 export async function completedAttempts(userId, limit = 100) {
-  return run(sb.from('attempts').select('id, chapter_ids, total_questions, correct_count, score, finished_at, duration_s, xp_earned')
+  return run(sb.from('attempts').select('id, chapter_ids, total_questions, correct_count, score, started_at, finished_at, duration_s, xp_earned, mode')
     .eq('user_id', userId).eq('status', 'completed').eq('is_preview', false).order('finished_at', { ascending: false }).limit(limit));
 }
 
@@ -337,6 +337,9 @@ export async function stemHash(stem) {
 const AUDIT_COLS = 'a1,a2,a3,a4,a5,a6,a7,a8,a9,objective,difficulty_suggested,action,run,audited_at';
 
 export const admin = {
+  async setBeltArchived(chapterId, archived) {
+    return run(sb.from('chapters').update({ belt_archived: !!archived }).eq('id', chapterId));
+  },
   async students() {
     return run(sb.from('profiles').select('id, display_name, role').eq('role', 'student').order('created_at'));
   },
