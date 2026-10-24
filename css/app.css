@@ -1266,3 +1266,4 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
 @keyframes dexShine{from{background-position:120% 0}to{background-position:-120% 0}}
 @media (prefers-reduced-motion:reduce){.dcard .shine,.rc-chest{animation:none}}
 .qs-row .grow{flex:1;min-width:0}.qs-row .nd-btn{flex:none;white-space:nowrap}
+.rs-clock{position:relative;margin-top:6px;font-size:13px;font-weight:800;color:inherit;opacity:.85}
