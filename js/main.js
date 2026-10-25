@@ -18,6 +18,7 @@ import { renderHero } from './features/hero.js';
 import { renderBosses } from './features/bosses.js';
 import { renderIntel } from './features/intel.js';
 import { renderDex } from './features/dex.js';
+import { renderTower } from './features/tower.js';
 
 window.MLS = { app };
 
@@ -57,6 +58,7 @@ async function boot() {
   route('bosses', renderBosses);
   route('intel', renderIntel);
   route('dex', renderDex);
+  route('tower', renderTower);
 
   startRouter();
   if (redirect?.startsWith('error:')) toast(`That reset link did not work (${redirect.slice(6)}). Ask for a new one.`, 6000);

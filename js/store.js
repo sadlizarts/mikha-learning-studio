@@ -151,7 +151,7 @@ export async function inProgressAttempt(userId) {
 }
 export async function completedAttempts(userId, limit = 100) {
   return run(sb.from('attempts').select('id, chapter_ids, total_questions, correct_count, score, started_at, finished_at, duration_s, xp_earned, mode')
-    .eq('user_id', userId).eq('status', 'completed').eq('is_preview', false).order('finished_at', { ascending: false }).limit(limit));
+    .eq('user_id', userId).eq('status', 'completed').eq('is_preview', false).neq('mode', 'tower').order('finished_at', { ascending: false }).limit(limit));
 }
 
 /* ---------------- practice ---------------- */
@@ -456,7 +456,7 @@ export const admin = {
   },
   async studentAttempts(studentId, limit = 60) {
     return run(sb.from('attempts').select('id, status, chapter_ids, total_questions, answered_count, correct_count, score, started_at, finished_at, duration_s, xp_earned')
-      .eq('user_id', studentId).eq('is_preview', false).order('started_at', { ascending: false }).limit(limit));
+      .eq('user_id', studentId).eq('is_preview', false).neq('mode', 'tower').order('started_at', { ascending: false }).limit(limit));
   },
   async studentProgress(studentId) {
     const rows = await run(sb.from('user_progress').select('xp_total, current_streak, best_streak, last_completed_date').eq('user_id', studentId).limit(1));
@@ -642,4 +642,16 @@ export async function heroGenerate(body) {
     throw new AppError('hero', msg);
   }
   return data;
+}
+
+/* v3.5 Survival Tower (all rules run on the server: lives, skills, chests, XP) */
+export async function towerLobby(userId) { return run(sb.rpc('tower_lobby', { p_user: userId || null })); }
+export async function towerStart(subjectId, cards) { return run(sb.rpc('tower_start', { p_subject: subjectId, p_cards: cards || [] })); }
+export async function towerResume(runId) { return run(sb.rpc('tower_resume', { p_run: runId })); }
+export async function towerSkill(runId, skill) { return run(sb.rpc('tower_skill', { p_run: runId, p_skill: skill })); }
+export async function towerAnswer(runId, qid, key, ms) { return run(sb.rpc('tower_answer', { p_run: runId, p_question: qid, p_chosen: key, p_time_ms: Math.max(0, Math.round(ms || 0)) })); }
+export async function towerEnd(runId) { return run(sb.rpc('tower_end', { p_run: runId })); }
+export async function towerRuns(userId, limit = 100) {
+  return run(sb.from('tower_runs').select('attempt_id, subject_id, started_at, ended_at, floor, wrong, lives, rewarded, loot, xp, ended_by')
+    .eq('user_id', userId).not('ended_at', 'is', null).order('started_at', { ascending: false }).limit(limit));
 }

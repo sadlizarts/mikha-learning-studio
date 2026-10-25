@@ -3,7 +3,7 @@ import { $, $$ } from './ui.js';
 
 const TABS = ['home', 'dojo', 'learn', 'progress', 'history'];
 const TAB_ALIAS = { hero: 'dojo', bosses: 'dojo', dex: 'dojo' };
-const NIGHT = ['login', 'home', 'pick', 'quiz', 'result', 'session', 'history', 'learn', 'lesson', 'intel', 'dex', 'schedule', 'progress', 'dojo', 'hero', 'bosses', 'admin'];   // v2.3: every student screen is Night Dojo; v2.7: admin too (calm variant)   // Night Dojo screens (dark theme, v2.0.0)   // sub-screens that keep their parent tab lit
+const NIGHT = ['login', 'home', 'pick', 'quiz', 'result', 'session', 'history', 'learn', 'lesson', 'intel', 'dex', 'tower', 'schedule', 'progress', 'dojo', 'hero', 'bosses', 'admin'];   // v2.3: every student screen is Night Dojo; v2.7: admin too (calm variant)   // Night Dojo screens (dark theme, v2.0.0)   // sub-screens that keep their parent tab lit
 const routes = {};
 let guard = () => true;
 let current = null;
