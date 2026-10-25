@@ -1267,3 +1267,69 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
 @media (prefers-reduced-motion:reduce){.dcard .shine,.rc-chest{animation:none}}
 .qs-row .grow{flex:1;min-width:0}.qs-row .nd-btn{flex:none;white-space:nowrap}
 .rs-clock{position:relative;margin-top:6px;font-size:13px;font-weight:800;color:inherit;opacity:.85}
+
+/* ===== v3.4.0 item card (Power, story, Tower effect, compare), legendary loot ===== */
+.nd .lcard .art .lpow{position:absolute;right:8px;bottom:6px;font:400 17px 'Lilita One',sans-serif;color:#fff;padding:1px 8px;border-radius:99px;background:rgba(10,8,22,.72);border:1px solid color-mix(in srgb,var(--rc) 70%,transparent)}
+.nd .lcard.r-legendary:not(.locked){padding:2px;background:linear-gradient(120deg,#FF3D2E,#FFD25A,#FF7EB6,#7A5CFF,#22E5FF,#FF3D2E);background-size:300% 300%;animation:legBorder 5s linear infinite;box-shadow:0 0 22px rgba(255,138,61,.35)}
+.nd .lcard.r-legendary.on{box-shadow:0 0 0 2px #fff,0 0 30px rgba(255,138,61,.6)}
+@keyframes legBorder{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+.nd .lcard.r-legendary.locked{background:linear-gradient(120deg,rgba(255,138,61,.5),rgba(122,92,255,.4));}
+.nd .lcard.r-legendary.locked .art svg{filter:brightness(0) drop-shadow(0 0 8px rgba(255,138,61,.7)) opacity(.7)}
+.nd .lcard .lstars{position:absolute;left:9px;bottom:8px;font-size:11px;color:var(--rc);letter-spacing:.02em;text-shadow:0 0 6px color-mix(in srgb,var(--rc) 60%,transparent)}
+.nd .lcard .rr{letter-spacing:.07em}.nd .lcard .lstars i,.isheet .lstars i{font-style:normal;opacity:.22}
+.nd .lcard .lef{font-size:11.5px;font-weight:900;color:#E6E1FA;background:rgba(255,255,255,.06);border-radius:8px;padding:2px 7px;align-self:flex-start;margin-top:2px}
+.nd .lcard.locked .lef{opacity:.6}
+.nd .lcard .lnew,.nd .lcard .lbest{position:absolute;top:7px;left:8px;font-size:10px;font-weight:900;letter-spacing:.1em;padding:2px 8px;border-radius:99px}
+.nd .lcard .lnew{background:#FF4D6D;color:#fff;box-shadow:0 0 12px rgba(255,77,109,.7);animation:newPulse 1.2s ease-in-out infinite alternate}
+.nd .lcard .lbest{background:rgba(255,210,90,.16);color:#FFD25A;border:1px solid rgba(255,210,90,.5)}
+@keyframes newPulse{to{transform:scale(1.08)}}
+.nd .lcard .lshine{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.5) 0 1.5px,transparent 2px),radial-gradient(circle at 72% 22%,rgba(255,255,255,.6) 0 1px,transparent 1.5px),radial-gradient(circle at 64% 70%,rgba(255,255,255,.5) 0 1.5px,transparent 2px),radial-gradient(circle at 22% 76%,rgba(255,255,255,.5) 0 1px,transparent 1.5px);animation:twinkle 2.2s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.25}to{opacity:1}}
+.aswirl{transform-origin:50px 50px;animation:raysSpin 6s linear infinite}
+.nd-tabs .tnew{display:inline-block;margin-left:4px;padding:0 6px;border-radius:99px;background:#FF4D6D;color:#fff;font-size:10px;font-weight:900;vertical-align:1px}
+.nd .sock[data-item]{cursor:pointer}
+.isheet{--nd-text:#F3F0FF;--nd-dim:#B3ABD3;--nd-faint:#7A7299;--nd-line:rgba(255,255,255,.09);--nd-line2:rgba(255,255,255,.16);--nd-panel:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.02));--nd-gold:#FFD25A;--nd-r:18px;
+  position:fixed;inset:0;z-index:85;display:grid;place-items:end center;background:rgba(5,4,12,.72);animation:rcIn .25s ease-out;overflow-y:auto;color:var(--nd-text)}
+@media (min-width:700px){.isheet{place-items:center}}
+.isheet .ipanel{position:relative;width:min(440px,100%);display:flex;flex-direction:column;gap:12px;padding:20px 16px calc(18px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;
+  background:radial-gradient(90% 45% at 50% 0%,color-mix(in srgb,var(--rc) 32%,transparent),transparent 70%),#130F26;border:1px solid rgba(255,255,255,.12);box-shadow:0 -10px 50px rgba(0,0,0,.6)}
+@media (min-width:700px){.isheet .ipanel{border-radius:24px}}
+.isheet .ix{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-size:15px;cursor:pointer}
+.isheet .ihead{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.isheet .iart{width:132px;height:132px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 45%,transparent),transparent 70%)}
+.isheet .iart svg{width:120px;height:120px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.55))}
+.isheet .r-legendary .iart,.isheet .ipanel.r-legendary .iart{animation:legGlow 2.4s ease-in-out infinite alternate}
+@keyframes legGlow{from{box-shadow:0 0 0 rgba(255,138,61,0)}to{box-shadow:0 0 40px rgba(255,138,61,.45)}}
+.isheet .irr{display:inline-block;padding:2px 10px;border-radius:99px;border:1.5px solid var(--rc);color:var(--rc);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.isheet .inm{font:400 28px 'Lilita One',sans-serif;line-height:1.05;color:#fff}
+.isheet .ids{margin:0;font-size:13.5px;line-height:1.4;color:#C9C2E6;max-width:34ch}
+.isheet .ibox{padding:14px}
+.isheet .ipw{display:flex;align-items:baseline;gap:6px}.isheet .ipw b{font:400 22px 'Lilita One',sans-serif;color:#fff;line-height:1}.isheet .ipw small{font-size:10.5px;font-weight:900;letter-spacing:.14em;color:#B3ABD3}
+.isheet .ipw.big b{font-size:38px}
+.isheet .idelta{font-size:12.5px;font-weight:900;color:#C9C2E6}.isheet .idelta.up{color:#46E0A0}.isheet .idelta.down{color:#FF6B7A}
+.isheet .nd-bar i{--bc:linear-gradient(90deg,color-mix(in srgb,var(--rc) 70%,#fff),var(--rc))}
+.isheet .ief{font-size:13px;line-height:1.4;color:#E6E1FA}.isheet .ief.dim{color:#9D95C2;font-size:12px;margin-top:4px}
+.isheet .icmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.isheet .icol{display:flex;flex-direction:column;gap:5px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);min-width:0}
+.isheet .icol.new{border-color:color-mix(in srgb,var(--rc) 60%,transparent);background:color-mix(in srgb,var(--rc) 8%,transparent)}
+.isheet .icol>b{font-size:14px;line-height:1.2}.isheet .icol .irr{align-self:flex-start;font-size:9.5px;padding:1px 8px}.isheet .icol .ief{font-size:11.5px;color:#C9C2E6}
+.isheet .ipanel{overflow:hidden}
+.isheet .ipanel>:not(.ix):not(.irays){position:relative}.isheet .ix{z-index:2}
+.isheet .irays{position:absolute!important;left:50%;top:96px;width:560px;height:560px;margin:-280px 0 0 -280px;pointer-events:none;opacity:.5;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 55%,transparent) 0 8deg,transparent 8deg 22deg);-webkit-mask:radial-gradient(circle,#000 0 25%,transparent 62%);mask:radial-gradient(circle,#000 0 25%,transparent 62%);animation:raysSpin 18s linear infinite}
+.isheet .r-epic .irays{opacity:.3}
+@keyframes raysSpin{to{transform:rotate(360deg)}}
+.isheet .iart{position:relative}
+.isheet .isp{position:absolute;width:8px;height:8px;background:#fff;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:spark 1.8s ease-in-out infinite}
+.isheet .isp.s1{top:8%;left:14%}.isheet .isp.s2{top:20%;right:6%;animation-delay:.5s;width:11px;height:11px}.isheet .isp.s3{bottom:12%;left:6%;animation-delay:.9s}.isheet .isp.s4{bottom:4%;right:20%;animation-delay:1.3s;width:6px;height:6px}
+@keyframes spark{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+.isheet .inew{font-size:12px;font-weight:900;letter-spacing:.14em;color:#FFD25A;text-shadow:0 0 12px rgba(255,210,90,.7)}
+.isheet .irank{font-size:11.5px;font-weight:900;color:#B3ABD3;letter-spacing:.04em}
+.isheet .lstars{color:var(--rc)}
+.isheet .ipanel.reveal .iart{animation:revealPop .7s cubic-bezier(.2,1.4,.4,1) both}
+.isheet .ipanel.reveal .iart::after{content:"";position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,#fff,transparent 60%);animation:revealFlash .8s ease-out forwards;pointer-events:none}
+@keyframes revealPop{from{transform:scale(.2) rotate(-25deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes revealFlash{from{opacity:1}to{opacity:0}}
+.isheet .ipanel.locked .iart svg{filter:grayscale(.6) brightness(.7)}
+.isheet .ipanel.locked .iart::before{content:"🔒";position:absolute;right:4px;bottom:4px;font-size:20px;z-index:1}
+@media (prefers-reduced-motion:reduce){.isheet,.isheet .iart,.isheet .irays,.isheet .isp,.nd .lcard .lnew,.nd .lcard .lshine,.nd .lcard.r-legendary,.aswirl{animation:none!important}}
