@@ -31,8 +31,21 @@ export const AURAS = {
   'u-c-gold': { color: 0xFFC83D, name: 'Royal Gold', chest: 'rare' },
   'u-c-void': { color: 0x9B30FF, name: 'Void Flame', chest: 'epic' },
   'u-c-aurora': { color: 0x00FFC6, name: 'Aurora Spirit', chest: 'epic' },
+  // v3.4 legendary auras (Survival Tower): the colour keeps shifting on the stage
+  'u-l-phoenix': { color: 0xFF6A2E, name: 'Phoenix Flame', chest: 'legendary', cycle: [0xFF3D2E, 0xFF8A2E, 0xFFD25A, 0xFF5A7A] },
+  'u-l-galaxy': { color: 0x7A5CFF, name: 'Galaxy Spirit', chest: 'legendary', cycle: [0x4B3DFF, 0x9B5CFF, 0x22E5FF, 0xFF7EB6] },
 };
-const CHEST_RARITY = { common: 'silver', rare: 'gold', epic: 'epic' };
+export const CHEST_RARITY = { common: 'silver', rare: 'gold', epic: 'epic', legendary: 'legendary' };
+const SUBJ_NAME = { math: 'Math', sci: 'Science', eng: 'English', ind: 'B. Indonesia', pan: 'Pancasila', aga: 'Agama' };
+/** v3.4 legendary subject weapons, owned through public.cosmetic_items (kind 'weapon') */
+export const LEGEND_WEAPONS = {
+  'w-l-infinity-compass': { name: 'Infinity Compass', subject: 'math' },
+  'w-l-quantum-prism': { name: 'Quantum Prism', subject: 'sci' },
+  'w-l-storyforge-quill': { name: 'Storyforge Quill', subject: 'eng' },
+  'w-l-aksara-agung': { name: 'Aksara Agung', subject: 'ind' },
+  'w-l-perisai-lima-sila': { name: 'Perisai Lima Sila', subject: 'pan' },
+  'w-l-lentera-fajar': { name: 'Lentera Fajar', subject: 'aga' },
+};
 
 // subject key -> item that grows with sealed bosses of that subject
 const SUBJECT_ITEM = {
@@ -65,7 +78,9 @@ export function catalog() {
     { key: 'w-grand-katana', slot: 'weapon', name: 'Legendary Katana', rule: rankN(7, 'legendary', 'Legendary') },
   ];
   for (const [key, a] of Object.entries(AURAS)) if (a.chest)
-    list.push({ key, slot: 'aura', name: a.name, chest: true, rule: (c) => ({ owned: !!c.cosmetics?.has(key), rarity: CHEST_RARITY[a.chest], hint: 'Found in round chests' }) });
+    list.push({ key, slot: 'aura', name: a.name, chest: true, rule: (c) => ({ owned: !!c.cosmetics?.has(key), rarity: CHEST_RARITY[a.chest], hint: a.chest === 'legendary' ? 'Any Tower, floor 40+' : 'Found in round chests' }) });
+  for (const [key, w] of Object.entries(LEGEND_WEAPONS))
+    list.push({ key, slot: 'weapon', name: w.name, subject: w.subject, legend: true, rule: (c) => ({ owned: !!c.cosmetics?.has(key), rarity: 'legendary', hint: `${SUBJ_NAME[w.subject]} Tower, floor 40+` }) });
   for (const [sub, it] of Object.entries(SUBJECT_ITEM)) {
     list.push({ ...it, subject: sub, rule: (c) => {
       const s = c.bySubject[sub] || { sealed: 0, total: 0 };
@@ -125,6 +140,8 @@ export const BRANCH_TITLES = {
 /** Crop box (rig units) for an item's icon. */
 export const ITEM_VIEW = {
   'a-headband': '330 270 500 230', 'a-amulet': '430 590 170 180', 'a-aksara-scarf': '380 560 290 290', 'a-dawn-lantern': '310 920 150 180',
+  // weapons (v3.4): fitted to each rotated icon; long staffs/lances crop to their head so the art reads big
+  'w-bokken': '539 388 564 564', 'w-ember-staff': '428 262 527 527', 'w-compass-blade': '479 323 628 628', 'w-prism-staff': '416 256 536 536', 'w-quill-lance': '383 183 602 602', 'w-grand-katana': '447 274 698 698', 'w-l-infinity-compass': '351 171 852 852', 'w-l-quantum-prism': '283 125 669 669', 'w-l-storyforge-quill': '283 94 694 694', 'w-l-aksara-agung': '404 224 777 777', 'w-l-perisai-lima-sila': '498 436 596 596', 'w-l-lentera-fajar': '319 172 626 626',
   'r-shoulder': '300 570 430 180', 'r-gauntlets': '270 780 510 130', 'r-unity-guard': '290 580 170 170', 'r-sealbreaker': '390 630 250 290',
 };
 export const itemView = (key) => ITEM_VIEW[key] || (key.startsWith('w-') ? '330 260 760 760' : '0 0 1024 1536');

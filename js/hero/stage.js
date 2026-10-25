@@ -7,6 +7,12 @@ let PIXI = null;
 const loadPixi = async () => (PIXI ||= await import('../../vendor/pixi.min.mjs'));
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ORDER = ['back', 'hairBack', 'body', 'outfit', 'armor', 'hairFront', 'accessory', 'weapon'];
+/** smooth loop through a list of 0xRRGGBB colours; t in "steps" */
+function cycleColor(list, t) {
+  const n = list.length, i = Math.floor(t) % n, f = t - Math.floor(t), a = list[i], b = list[(i + 1) % n];
+  const mix = (sh) => Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * f);
+  return (mix(16) << 16) | (mix(8) << 8) | mix(0);
+}
 const ease = { out: t => 1 - Math.pow(1 - t, 3), inOut: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2 };
 
 function loadImage(src) {
@@ -93,6 +99,7 @@ export class HeroStage {
         sp.texture = tex[k]; sp.scale.set((1 / scale) * (a.scale || 1)); sp.position.set(W / 2 + (a.x || 0), H / 2 + (a.y || 0));
       }
       this.auraColor = AURAS[look.equipped?.aura]?.color ?? null;
+      this.auraCycle = AURAS[look.equipped?.aura]?.cycle || null;   // v3.4 legendary auras shift colour
     };
     if (animate === 'equip' && !reduced()) {
       const ks = changed.filter(k => ['weapon', 'armor', 'accessory'].includes(k));
@@ -175,6 +182,7 @@ export class HeroStage {
     this.layers.weapon.position.y = H / 2 + (this.look?.anchors?.weapon?.y || 0) + Math.sin(this.t * 2) * 4;
     this.auraG.clear();
     if (this.auraColor != null) {
+      if (this.auraCycle) this.auraColor = cycleColor(this.auraCycle, this.t / 1.6);
       const p = 0.5 + 0.5 * Math.sin(this.t * 2.2), s = this.scale;
       for (let i = 4; i >= 1; i--) this.auraG.ellipse(0, 0, (230 + i * 46 + p * 20) * s, (520 + i * 60 + p * 26) * s).fill({ color: this.auraColor, alpha: 0.05 + 0.02 * p });
       if (Math.random() < dt * 14) {
