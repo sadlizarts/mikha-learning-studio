@@ -79,11 +79,11 @@ export const STARS = { bronze: 1, silver: 2, gold: 3, epic: 4, legendary: 5 };
 
 /** What the skills do (shown on the item card and in the Tower lobby). */
 export const SKILL_HELP = {
-  focus: 'Focus: removes 1 wrong answer.',
-  insight: 'Insight: shows the hint for this question.',
+  focus: 'Focus: shows the method hint.',
+  insight: 'Insight: shows the method hint and the first step.',
   cut: 'Cut: removes 2 wrong answers.',
   guard: 'Guard: a wrong answer costs no life.',
-  lastStand: 'Last Stand: once per run, the run-ending mistake is forgiven.',
+  lastStand: 'Last Stand: once per run, the mistake that would end your climb is forgiven.',
 };
 
 /** Hero Power = sum of the equipped items' power. */
