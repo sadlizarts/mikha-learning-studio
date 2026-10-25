@@ -172,12 +172,13 @@ export async function renderHome() {
       ${unseen.map(r => `<div class="rt-line"><span>${r.auto ? 'Practice left for 24 hours' : `Retreat #${r.nth} today`}</span><b class="num">−${r.xp_lost} XP</b></div>${r.rank_after < r.rank_before ? `<div class="rt-line drop">Belt dropped to ${esc(RANKS[r.rank_after]?.belt || '')}. Pass the exam again to win it back.</div>` : ''}`).join('')}
       <p class="nd-sub" style="margin:6px 0 10px">Finish your battles to calm the angry monsters. Wrong answers come back first.</p>
       <button class="nd-btn small" id="rtok">Got it</button></div>` : '';
+  const towerNd = `<button class="nd-card tw-entry" data-nav="#/tower"><img src="hero/mon3-${['math', 'sci', 'eng', 'ind', 'pan', 'aga'][new Date().getDate() % 6]}-exam.webp" alt="" decoding="async"><div class="grow"><div class="nd-label" style="color:var(--nd-gold)">New · Survival mode</div><b>Survival Tower</b><span class="nd-sub">3 lives, random questions, a boss every 10 floors. Legendary loot waits at the top.</span></div><span aria-hidden="true">›</span></button>`;
   body.innerHTML = `<div class="nd-stack hm">
     ${greet}
     ${rtCard}
     <div class="hgrid">
     <div class="hmain">
-    ${hi(resumeNd, 1)}${viewing ? '' : '<div class="hitem" style="order:2" id="questslot"></div>'}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
+    ${hi(resumeNd, 1)}${viewing ? '' : '<div class="hitem" style="order:2" id="questslot"></div>'}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(towerNd, 5)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
     <div class="hitem" style="order:10">
       <div class="nd-sec"><div class="nd-h2">Recent battles</div>${done.length ? '<button class="nd-link" data-nav="#/history">All ›</button>' : ''}</div>
       <div class="recent">${done.length ? done.slice(0, 3).map(a => recRow(a, idx)).join('') :

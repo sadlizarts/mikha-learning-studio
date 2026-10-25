@@ -219,6 +219,7 @@ export async function renderDojo() {
       </div>
     </button>
     ${missionRow(d)}
+    <button class="nd-card tw-entry" data-nav="#/tower"><img src="hero/mon3-${bosses[0]?.fam || 'sci'}-exam.webp" alt="" decoding="async"><div class="grow"><div class="nd-label" style="color:var(--nd-gold)">Survival mode</div><b>Survival Tower</b><span class="nd-sub">Climb with your technique cards. Floor chests, Legendary gear.</span></div><span aria-hidden="true">›</span></button>
     <button class="nd-card dj-dex" data-nav="#/dex"><span class="ic">📖</span><div class="grow"><b>Monster Dex</b><span class="nd-sub">Collect a card for every boss you seal</span></div><b class="num">${bosses.filter(b => b.beaten).length}/${bosses.length}</b><span aria-hidden="true">›</span></button>
     ${gateCard(d)}
     ${targets.length ? `<div><div class="nd-sec"><div class="nd-h2">Priority hunt</div><button class="nd-link" data-nav="#/bosses">All bosses →</button></div>

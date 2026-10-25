@@ -1,10 +1,10 @@
 // History (v2.6.0 Night Dojo "Battle log"): every finished practice and every Retreat, grouped by day; tap a battle for its result.
-import { $, esc, scoreCls, fmtDur, jakartaDate, shortDay, fmtNum, clock, spanMin } from '../ui.js';
-import { completedAttempts, retreatLog } from '../store.js';
+import { $, esc, scoreCls, fmtDur, jakartaDate, shortDay, fmtNum, clock, spanMin, subjectMeta } from '../ui.js';
+import { completedAttempts, retreatLog, towerRuns } from '../store.js';
 import { catalog, chapterIndex, viewerId } from '../state.js';
 import { show } from '../router.js';
 import { chaptersLabel } from './home.js';
-import { monsterSVG, phaseOf } from '../monsters.js';
+import { monsterSVG, phaseOf, monsterSrc } from '../monsters.js';
 import { bossState, rules } from '../dojo.js';
 
 export async function renderHistory() {
@@ -13,17 +13,17 @@ export async function renderHistory() {
   if (!list.dataset.ready) list.innerHTML = '<div class="loading" style="height:30vh"><div class="spin"></div></div>';
   try {
     const vid = viewerId();
-    const [cat, rows, rts] = await Promise.all([catalog(), completedAttempts(vid, 200), retreatLog(vid, 100).catch(() => [])]);
+    const [cat, rows, rts, tws] = await Promise.all([catalog(), completedAttempts(vid, 200), retreatLog(vid, 100).catch(() => []), towerRuns(vid, 100).catch(() => [])]);
     const idx = chapterIndex(cat), R = rules(cat);
-    if (!rows.length && !rts.length) {
+    if (!rows.length && !rts.length && !tws.length) {
       list.innerHTML = '<div class="nd-card" style="text-align:center"><div class="nd-h2">No battles yet</div><p class="nd-sub" style="margin:6px 0 12px">Your first practice shows up here.</p><button class="nd-btn primary" data-nav="#/pick">Pick chapters →</button></div>';
       return;
     }
     const thumb = (cid) => { const c = idx[cid]; if (!c) return ''; const st = cat.statBy[cid]; let ph = st ? phaseOf(bossState(st, false, R), R) : 'minion'; if (ph === 'new') ph = 'minion'; return monsterSVG(c, { phase: ph, size: 46 }); };
     const best = rows.reduce((m, a) => Math.max(m, a.score || 0), 0);
     const avg = rows.length ? Math.round(rows.reduce((t, a) => t + (a.score || 0), 0) / rows.length) : 0;
-    const xp = rows.reduce((t, a) => t + (a.xp_earned || 0), 0) - rts.reduce((t, r) => t + (r.xp_lost || 0), 0);
-    const items = [...rows.map(a => ({ t: a.finished_at, a })), ...rts.map(r => ({ t: r.created_at, r }))].sort((x, y) => new Date(y.t) - new Date(x.t));
+    const xp = rows.reduce((t, a) => t + (a.xp_earned || 0), 0) + tws.reduce((t, w) => t + (w.xp || 0), 0) - rts.reduce((t, r) => t + (r.xp_lost || 0), 0);
+    const items = [...rows.map(a => ({ t: a.finished_at, a })), ...rts.map(r => ({ t: r.created_at, r })), ...tws.map(w => ({ t: w.ended_at, w }))].sort((x, y) => new Date(y.t) - new Date(x.t));
     const today = jakartaDate(), yday = jakartaDate(Date.now() - 86400000);
     let lastDay = '', html = '';
     for (const it of items) {
@@ -34,6 +34,11 @@ export async function renderHistory() {
         html += `<button class="hs-row" data-nav="#/session/${a.id}"><div class="hs-mon">${thumb(first)}</div>
           <div class="grow" style="min-width:0"><div class="t">${esc(chaptersLabel(a.chapter_ids, idx))}</div><div class="nd-sub num" style="font-size:12px">🕒 ${clock(a.started_at)}–${clock(a.finished_at)}${spanMin(a.started_at, a.finished_at) ? ` (${spanMin(a.started_at, a.finished_at)} min)` : ''} · ${a.mode && a.mode !== 'normal' ? `${{ blitz: '⚡ Blitz', rage: '💢 Rage', revenge: '🔁 Revenge' }[a.mode] || ''} · ` : ''}${a.total_questions} q${a.xp_earned ? ` · <span style="color:var(--nd-gold)">+${a.xp_earned} XP</span>` : ''}</div></div>
           <div class="score-pill num ${scoreCls(a.score)}">${a.score}</div></button>`;
+      } else if (it.w) {   // v3.5 Survival Tower run
+        const w = it.w, sub = cat.subjects.find(x => x.id === w.subject_id), m = subjectMeta(sub), loot = (w.loot || []).filter(x => x.item || x.kind).length;
+        html += `<div class="hs-row tower"><div class="hs-mon"><img src="${monsterSrc(m.key, 'exam')}" alt="" width="46" height="46" decoding="async"></div>
+          <div class="grow" style="min-width:0"><div class="t">🗼 Tower · ${esc(m.short)}</div><div class="nd-sub num" style="font-size:12px">🕒 ${clock(w.started_at)}–${clock(w.ended_at)}${spanMin(w.started_at, w.ended_at) ? ` (${spanMin(w.started_at, w.ended_at)} min)` : ''} · ${w.lives <= 0 ? 'defeated' : 'left'}${loot ? ` · 🎁 ${loot} item${loot === 1 ? '' : 's'}` : ''}${w.xp ? ` · <span style="color:var(--nd-gold)">+${w.xp} XP</span>` : ''}</div></div>
+          <div class="score-pill num tw-pill">F${w.floor}</div></div>`;
       } else {
         const r = it.r;
         html += `<div class="hs-row retreat"><div class="hs-mon"><span class="hs-flag" aria-hidden="true">🏳️</span></div>
