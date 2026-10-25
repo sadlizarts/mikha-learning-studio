@@ -10,6 +10,8 @@ import { RANKS, beltSVG, cardTier } from '../dojo.js';
 import { heroSVG, heroPic, STAGE_ART, itemArt, svgDoc } from '../hero/art.js';
 import { RARITY, SLOTS, AURAS, inventory, heroContext, validEquip, slotOpen, stats, itemView, BRANCH_TITLES } from '../hero/items.js';
 import { FAMILIES, familyEmblem } from '../monsters.js';
+import { DESC, powerOf, effectOf, heroPower, SKILL_HELP, STARS } from '../hero/iteminfo.js';
+import { sfx } from '../sfx.js';
 
 let stageObj = null, slotFilter = 'all', S = null, saveT = null, heroTab = 'gear';
 
@@ -36,7 +38,12 @@ function lookFor(stage, equipped, assets) {
 
 function itemIcon(it, size = 64) {
   if (it.slot === 'aura') {
-    const c = '#' + (AURAS[it.key]?.color ?? 0xffffff).toString(16).padStart(6, '0');
+    const hx = (n) => '#' + n.toString(16).padStart(6, '0');
+    const c = hx(AURAS[it.key]?.color ?? 0xffffff), cy = AURAS[it.key]?.cycle;
+    if (cy) {   // legendary aura: a swirl of its colours
+      const st = cy.map((x, i) => `<stop offset="${(i / (cy.length - 1)).toFixed(2)}" stop-color="${hx(x)}"/>`).join('');
+      return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true"><defs><linearGradient id="lg-${it.key}" x1="0" y1="0" x2="1" y2="1">${st}</linearGradient><radialGradient id="g-${it.key}"><stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="${c}" stop-opacity=".8"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="50" r="48" fill="url(#g-${it.key})"/><g class="aswirl"><path d="M50 14 C74 14 86 34 80 50 C74 66 52 60 50 50 C48 40 30 36 22 50 C14 64 28 86 50 86" fill="none" stroke="url(#lg-${it.key})" stroke-width="7" stroke-linecap="round"/><circle cx="50" cy="50" r="15" fill="url(#lg-${it.key})" stroke="#1B1826" stroke-width="3"/></g></svg>`;
+    }
     return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true"><defs><radialGradient id="g-${it.key}"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#g-${it.key})"/><circle cx="50" cy="50" r="18" fill="${c}" stroke="#1B1826" stroke-width="3"/></svg>`;
   }
   const art = it.slot === 'weapon' ? `<g transform="rotate(-38 722 640)">${itemArt(it.key)}</g>` : itemArt(it.key);
@@ -60,6 +67,8 @@ export async function renderHero() {
   const equipped = validEquip(hp.equipped, inv, ctx);
   for (const k of ['title', 'frame']) if (hp.equipped?.[k] && cos.owned.has(hp.equipped[k])) equipped[k] = hp.equipped[k];   // v3.1 cosmetic slots
   S = { d, ctx, inv, stage, equipped, assets, hp, viewing, cos };
+  initSeen();
+  const fresh = inv.filter(isNew).length;
   const titleName = cos.items.find(i => i.key === equipped.title)?.name;
   const st = stats(d, ctx), lv = ctx.lv;
   const rk = RANKS[stage], next = RANKS[stage + 1];
@@ -82,11 +91,11 @@ export async function renderHero() {
       </div>
       <div class="nd-stack" style="gap:16px;min-width:0">
         <div class="stat-row">
-          <div class="nd-card stat"><div class="nd-label">Power</div><div class="v">${st.power}</div><div class="nd-sub" style="font-size:11.5px">card tiers</div></div>
+          <div class="nd-card stat"><div class="nd-label">Power</div><div class="v" id="hpow">${heroPower(equipped, inv)}</div><div class="nd-sub" style="font-size:11.5px">equipped gear</div></div>
           <div class="nd-card stat"><div class="nd-label">Focus</div><div class="v">${st.focus}%</div><div class="nd-sub" style="font-size:11.5px">avg last 30</div></div>
           <div class="nd-card stat"><div class="nd-label">Spirit</div><div class="v">${st.spirit}</div><div class="nd-sub" style="font-size:11.5px">best streak</div></div>
         </div>
-        <div class="nd-tabs" role="tablist">${[['gear', 'Gear'], ['loot', `Loot ${inv.filter(i => i.owned).length}/${inv.length}`], ['chest', `Chest ${cos.owned.size}/${cos.items.length}`], ['mastery', 'Mastery'], ['evolve', 'Evolution']].map(([k, l]) => `<button role="tab" class="${heroTab === k ? 'on' : ''}" data-tab2="${k}">${l}</button>`).join('')}</div>
+        <div class="nd-tabs" role="tablist">${[['gear', 'Gear'], ['loot', `Loot ${inv.filter(i => i.owned).length}/${inv.length}${fresh ? ` <span class="tnew">${fresh} new</span>` : ''}`], ['chest', `Chest ${cos.items.filter(i => i.kind !== 'weapon' && cos.owned.has(i.key)).length}/${cos.items.filter(i => i.kind !== 'weapon').length}`], ['mastery', 'Mastery'], ['evolve', 'Evolution']].map(([k, l]) => `<button role="tab" class="${heroTab === k ? 'on' : ''}" data-tab2="${k}">${l}</button>`).join('')}</div>
         <div id="hp-tab"></div>
       </div>
     </div>
@@ -125,7 +134,7 @@ function renderTab() {
   else if (heroTab === 'mastery') el.innerHTML = masteryHTML();
   else if (heroTab === 'chest') el.innerHTML = chestHTML();
   else el.innerHTML = evolveHTML();
-  $$('[data-item]', el).forEach(b => b.onclick = () => equip(b.dataset.item));
+  $$('[data-item]', el).forEach(b => b.onclick = () => openItem(b.dataset.item));
   $$('[data-cos]', el).forEach(b => b.onclick = () => equipCosmetic(b.dataset.kind, b.dataset.cos));
   const tr = $('#trade', el); if (tr) tr.onclick = trade;
   $$('[data-sf]', el).forEach(b => b.onclick = () => { slotFilter = b.dataset.sf; renderTab(); });
@@ -143,33 +152,59 @@ function gearHTML() {
   const { ctx, equipped, inv } = S;
   const sockets = SLOTS.map(s => {
     const open = slotOpen(ctx, s.key), it = inv.find(i => i.key === equipped[s.key]);
-    return `<div class="sock ${open ? (it ? 'filled' : '') : 'locked'}" style="--rc:${it ? RARITY[it.rarity].color : 'transparent'}">
+    return `<div class="sock ${open ? (it ? 'filled' : '') : 'locked'}" style="--rc:${it ? RARITY[it.rarity].color : 'transparent'}" ${it ? `data-item="${it.key}" role="button" tabindex="0"` : ''}>
       <b>${s.name}</b><div class="ic">${open ? (it ? itemIcon(it, 58) : '<span class="nd-sub">Empty</span>') : '🔒'}</div>
-      <span>${open ? (it ? esc(it.name) : 'Choose in Loot') : `Opens at Level ${s.level}`}</span>${it ? `<span class="nd-pill" style="--c:${RARITY[it.rarity].color}"><span class="dot"></span>${RARITY[it.rarity].name}</span>` : ''}</div>`;
+      <span>${open ? (it ? esc(it.name) : 'Choose in Loot') : `Opens at Level ${s.level}`}</span>${it ? `<span class="nd-pill" style="--c:${RARITY[it.rarity].color}"><span class="dot"></span>${RARITY[it.rarity].name} · ${powerOf(it)}</span>` : ''}</div>`;
   }).join('');
   const best = inv.filter(i => i.owned && slotOpen(ctx, i.slot) && equipped[i.slot] !== i.key).sort((a, b) => RARITY[b.rarity].n - RARITY[a.rarity].n).slice(0, 3);
   return `<div class="nd-stack" style="gap:14px">
     <div class="nd-card"><div class="nd-sec" style="margin-top:0"><div class="nd-h2">Equipped</div><span class="nd-sub">Tap Loot to swap</span></div><div class="doll">${sockets}</div></div>
-    ${best.length ? `<div><div class="nd-sec"><div class="nd-h2" style="font-size:18px">Ready to try</div></div><div class="loot">${best.map(lootCard).join('')}</div></div>` : ''}
+    ${best.length ? `<div><div class="nd-sec"><div class="nd-h2" style="font-size:18px">Ready to try</div></div><div class="loot">${best.map(i => lootCard(i)).join('')}</div></div>` : ''}
   </div>`;
 }
 
-function lootCard(it) {
+/* v3.4 "NEW" badges: items owned since the last visit (per viewer, local only; first visit marks everything seen) */
+const seenKey = () => `mls_seen_items_${app.viewAs?.id || app.user?.id || 'x'}`;
+function seenSet() {
+  try { const v = localStorage.getItem(seenKey()); return v ? new Set(JSON.parse(v)) : null; } catch { return new Set(); }
+}
+function saveSeen(set) { try { localStorage.setItem(seenKey(), JSON.stringify([...set])); } catch { /* private mode */ } }
+function initSeen() {
+  let s = seenSet();
+  if (!s) { s = new Set(S.inv.filter(i => i.owned).map(i => i.key)); saveSeen(s); }
+  S.seen = s;
+}
+const isNew = (it) => it.owned && S.seen && !S.seen.has(it.key);
+function markSeen(key) { if (!S.seen || S.seen.has(key)) return; S.seen.add(key); saveSeen(S.seen); }
+/** strongest owned item per slot */
+function bestBySlot() {
+  const best = {};
+  for (const i of S.inv) if (i.owned && (!best[i.slot] || powerOf(i) > powerOf(best[i.slot]))) best[i.slot] = i;
+  return best;
+}
+const stars = (rar) => `<span class="lstars" aria-label="${STARS[rar]} of 5 stars">${'★'.repeat(STARS[rar])}<i>${'★'.repeat(5 - STARS[rar])}</i></span>`;
+
+function lootCard(it, best = bestBySlot()) {
   const { equipped, ctx, viewing } = S;
   const r = RARITY[it.rarity], on = equipped[it.slot] === it.key, open = slotOpen(ctx, it.slot), slot = SLOTS.find(s => s.key === it.slot);
+  const ef = effectOf(it), top = it.owned && best[it.slot]?.key === it.key && !on;
   return `<button class="lcard r-${it.rarity} ${it.owned ? '' : 'locked'} ${on ? 'on' : ''}" data-item="${it.key}" style="--rc:${r.color}" ${!it.owned || viewing ? 'aria-disabled="true"' : ''}>
-    <div class="in"><div class="art">${itemIcon(it, 96)}${it.owned ? '<i class="gem"></i>' : ''}</div>
+    <div class="in"><div class="art">${itemIcon(it, 96)}${it.owned ? '<i class="gem"></i>' : ''}<span class="lpow num" title="Power">⚡${powerOf(it)}</span>${stars(it.rarity)}
+      ${isNew(it) ? '<span class="lnew">NEW</span>' : top ? '<span class="lbest">BEST</span>' : ''}${it.rarity === 'legendary' || it.rarity === 'epic' ? '<i class="lshine" aria-hidden="true"></i>' : ''}</div>
     <div class="tx"><div class="rr">${r.name} · ${esc(slot.name)}</div><div class="nm">${esc(it.name)}</div>
-    <div class="st">${it.owned ? (on ? '✓ Equipped' : open ? 'Tap to equip' : `Slot opens at Level ${slot.level}`) : '🔒 ' + esc(it.hint)}</div></div></div></button>`;
+    ${ef.short ? `<div class="lef">${ef.short}</div>` : ''}
+    <div class="st">${it.owned ? (on ? '✓ Equipped' : open ? 'Tap for details' : `Slot opens at Level ${slot.level}`) : '🔒 ' + esc(it.hint)}</div></div></div></button>`;
 }
 
 function lootHTML() {
   const { inv } = S;
-  const list = inv.filter(i => slotFilter === 'all' || i.slot === slotFilter);
+  const best = bestBySlot();
+  const list = inv.filter(i => slotFilter === 'all' || i.slot === slotFilter)
+    .sort((a, b) => (b.owned - a.owned) || (powerOf(b) - powerOf(a)));
   return `<div class="nd-stack" style="gap:12px">
     <div class="nd-chips">${[['all', 'All'], ...SLOTS.map(s => [s.key, s.name])].map(([k, l]) => `<button class="nd-chip plain ${k === slotFilter ? 'on' : ''}" data-sf="${k}">${l}</button>`).join('')}</div>
-    <div class="loot">${list.map(lootCard).join('')}</div>
-    <p class="nd-sub" style="font-size:12px">Loot comes from levels, sealing 2/4/all bosses of a family, and passing gate exams. Rarity: Bronze → Silver → Gold → Epic → Legendary.</p>
+    <div class="loot">${list.map(i => lootCard(i, best)).join('')}</div>
+    <p class="nd-sub" style="font-size:12px">Loot comes from levels, sealing 2/4/all bosses of a family, gate exams and chests. Rarity: Bronze → Silver → Gold → Epic → Legendary. Power shows which item is stronger; bonuses only work in the Survival Tower. Tap an item for details.</p>
   </div>`;
 }
 
@@ -209,7 +244,7 @@ function evolveHTML() {
 }
 
 /* ---- v3.1 chest collection: titles, card frames, shards (auras live in Loot/Gear) ---- */
-const CR = { common: ['Common', '#B8C2D0'], rare: ['Rare', '#3987e5'], epic: ['Epic', '#B9A6FF'] };
+const CR = { common: ['Common', '#B8C2D0'], rare: ['Rare', '#3987e5'], epic: ['Epic', '#B9A6FF'], legendary: ['Legendary', '#FF8A3D'] };
 function chestHTML() {
   const { cos, equipped, viewing } = S;
   const kind = (k) => cos.items.filter(i => i.kind === k);
@@ -217,7 +252,7 @@ function chestHTML() {
     const pv = i.kind === 'frame' ? `<span class="ci-frame" style="--c1:${esc(i.data?.c1 || '#fff')};--c2:${esc(i.data?.c2 || '#333')}">?</span>`
       : i.kind === 'aura' ? `<span class="ci-aura" style="--ac:${esc(i.data?.color || '#fff')}"></span>` : '';
     return `<button class="cos ${own ? '' : 'locked'} ${on ? 'on' : ''}" style="--rc:${rc}" ${own && !viewing && i.kind !== 'aura' ? `data-cos="${i.key}" data-kind="${i.kind}"` : 'aria-disabled="true"'}>
-      ${pv}<div class="tx"><span class="rr" style="color:${rc}">${rn}</span><b ${i.kind === 'title' && own ? 'class="ci-title sm"' : ''}>${own ? (i.kind === 'title' ? `“${esc(i.name)}”` : esc(i.name)) : '???'}</b><span class="st">${own ? (i.kind === 'aura' ? 'Equip in Gear' : on ? '✓ Equipped' : 'Tap to equip') : '🔒 Chest'}</span></div></button>`; };
+      ${pv}<div class="tx"><span class="rr" style="color:${rc}">${rn}</span><b ${i.kind === 'title' && own ? 'class="ci-title sm"' : ''}>${own ? (i.kind === 'title' ? `“${esc(i.name)}”` : esc(i.name)) : '???'}</b><span class="st">${own ? (i.kind === 'aura' ? 'Equip in Gear' : on ? '✓ Equipped' : 'Tap to equip') : i.rarity === 'legendary' ? '🔒 Tower' : '🔒 Chest'}</span></div></button>`; };
   return `<div class="nd-stack" style="gap:14px">
     <div class="nd-card"><div class="row between"><div><div class="nd-h2" style="font-size:18px">Shards</div><div class="nd-sub" style="font-size:12px">Duplicates from chests. 10 shards = pick any item.</div></div><b class="shards num">💎 ${cos.shards}/10</b></div>
       ${!viewing && cos.shards >= 10 ? '<button class="nd-btn primary block" id="trade" style="margin-top:10px">Trade 10 shards →</button>' : ''}</div>
@@ -238,12 +273,59 @@ function equipCosmetic(kind, key) {
   saveT = setTimeout(() => saveHero({ equipped: eq }).catch(e => toast(e.message, 2500)), 600);
 }
 async function trade() {
-  const { cos } = S, open = cos.items.filter(i => !cos.owned.has(i.key));
+  const { cos } = S, open = cos.items.filter(i => !cos.owned.has(i.key) && i.rarity !== 'legendary');   // legendary only from the Tower
   if (!open.length) { toast('You own everything already!', 2000); return; }
   const v = await sheet({ title: 'Pick an item (10 shards)', body: '', actions: [...open.map(i => ({ label: `${CR[i.rarity][0]} · ${i.name} (${i.kind})`, value: i.key })), { label: 'Cancel', value: null }] });
   if (!v) return;
   try { const r = await redeemShards(v); cos.owned.add(v); cos.shards = r.shards; S.ctx.cosmetics = cos.owned; S.inv = inventory(S.ctx); toast(`✨ ${r.item.name} is yours!`, 2200); renderTab(); }
   catch (e) { toast(e.message, 2600); }
+}
+
+/* ---- v3.4 item card: story, Power, Tower effect, compare with the equipped item ---- */
+function openItem(key) {
+  const { inv, equipped, ctx, viewing } = S;
+  const it = inv.find(i => i.key === key); if (!it) return;
+  const wasNew = isNew(it);
+  if (wasNew) { markSeen(key); const left = S.inv.filter(isNew).length, t = document.querySelector('[data-tab2="loot"] .tnew'); if (t) { if (left) t.textContent = `${left} new`; else t.remove(); } }
+  const r = RARITY[it.rarity], slot = SLOTS.find(s => s.key === it.slot), pw = powerOf(it), ef = effectOf(it);
+  const cur = inv.find(i => i.key === equipped[it.slot]), same = cur?.key === it.key;
+  const d = cur && !same ? pw - powerOf(cur) : null;
+  const open = slotOpen(ctx, it.slot);
+  const canEquip = it.owned && open && !viewing && !(same && it.slot === 'weapon');
+  const col = (x, lab, cls) => `<div class="icol ${cls}"><span class="nd-label">${lab}</span><b>${esc(x.name)}</b><span class="irr" style="--rc:${RARITY[x.rarity].color}">${RARITY[x.rarity].name}</span><div class="ipw"><b class="num">${powerOf(x)}</b><small>POWER</small></div><span class="ief">${esc(effectOf(x).text)}</span></div>`;
+  const wrap = document.createElement('div');
+  wrap.className = 'isheet nd'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', it.name);
+  const fancy = it.rarity === 'legendary' || it.rarity === 'epic';
+  const peers = inv.filter(i => i.slot === it.slot).sort((a, b) => powerOf(b) - powerOf(a)), rank = peers.findIndex(i => i.key === it.key) + 1;
+  wrap.innerHTML = `<div class="ipanel r-${it.rarity} ${wasNew ? 'reveal' : ''} ${it.owned ? '' : 'locked'}" style="--rc:${r.color}">
+    ${fancy ? '<div class="irays" aria-hidden="true"></div>' : ''}
+    <button class="ix" data-x aria-label="Close">✕</button>
+    <div class="ihead"><div class="iart">${itemIcon(it, 120)}${fancy ? '<i class="isp s1"></i><i class="isp s2"></i><i class="isp s3"></i><i class="isp s4"></i>' : ''}</div>
+      ${wasNew ? '<span class="inew">✨ NEW ITEM!</span>' : ''}
+      <span class="irr" style="--rc:${r.color}">${stars(it.rarity)} ${r.name} · ${esc(slot.name)}</span><div class="inm">${esc(it.name)}</div>
+      <p class="ids">${esc(DESC[it.key] || 'A piece of gear for your hero.')}</p>
+      <span class="irank">${rank === 1 ? `👑 Strongest ${esc(slot.name.toLowerCase())} in the game` : `#${rank} of ${peers.length} ${esc(slot.name.toLowerCase())}s by Power`}</span></div>
+    <div class="nd-card ibox"><div class="row between" style="align-items:flex-end"><div class="ipw big"><b class="num">${pw}</b><small>POWER</small></div>
+      ${d != null ? `<span class="idelta ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '▲ +' + d : d < 0 ? '▼ ' + d : '= same'} vs your ${esc(slot.name.toLowerCase())}</span>` : same ? '<span class="idelta">✓ Equipped now</span>' : ''}</div>
+      <div class="nd-bar" style="margin:8px 0 10px"><i style="--p:${Math.min(100, pw)}%"></i></div>
+      <div class="ief"><b>Tower effect:</b> ${esc(ef.text)}</div>
+      ${ef.cut || ef.guard || ef.focus || ef.lastStand ? `<div class="ief dim">${[ef.focus && SKILL_HELP.focus, ef.cut && SKILL_HELP.cut, ef.guard && SKILL_HELP.guard, ef.lastStand && SKILL_HELP.lastStand].filter(Boolean).map(esc).join(' ')}</div>` : ''}
+      <div class="ief dim">${it.owned ? '✓ You own this' : '🔒 ' + esc(it.hint)}</div></div>
+    ${cur && !same ? `<div class="icmp">${col(cur, 'Equipped', '')}${col(it, it.owned ? 'This item' : 'Locked', 'new')}</div>` : ''}
+    ${canEquip ? `<button class="nd-btn primary block" data-eq>${same ? 'Take off' : 'Equip ' + esc(it.name)}</button>`
+      : !it.owned ? '' : !open ? `<p class="nd-sub" style="text-align:center">The ${esc(slot.name.toLowerCase())} slot opens at Level ${slot.level}.</p>` : ''}
+  </div>`;
+  const close = (eq) => { wrap.remove(); document.removeEventListener('keydown', onKey); if (wasNew && !eq) renderTab(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  wrap.addEventListener('click', e => {
+    if (e.target === wrap || e.target.closest('[data-x]')) close();
+    else if (e.target.closest('[data-eq]')) { sfx.shield(); close(true); equip(key); }
+  });
+  if (wasNew) (it.rarity === 'legendary' || it.rarity === 'epic' ? sfx.chest(it.rarity) : sfx.star(STARS[it.rarity]));
+  else sfx.tap();
+  document.addEventListener('keydown', onKey);
+  $('#app').appendChild(wrap);
+  wrap.querySelector('[data-eq], [data-x]')?.focus();
 }
 
 async function equip(key) {
@@ -256,6 +338,7 @@ async function equip(key) {
   if (eq[it.slot] === key && it.slot !== 'weapon') delete eq[it.slot]; else eq[it.slot] = key;
   S.equipped = eq;
   renderTab();
+  const hpw = $('#hpow'); if (hpw) hpw.textContent = heroPower(eq, inv);
   if (stageObj?.app) stageObj.setLook(lookFor(S.stage, eq, S.assets), { animate: 'equip' });
   clearTimeout(saveT);
   saveT = setTimeout(() => saveHero({ equipped: eq }).catch(e => toast(e.message, 2500)), 600);
