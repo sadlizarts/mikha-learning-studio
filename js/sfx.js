@@ -45,6 +45,7 @@ export const sfx = {
   star: safe((i = 0) => { tone(1047 + i * 220, 0.16, 'triangle', 0.22); }),
   chest: safe((rarity = 'common') => {
     noise(0.25, 0.12, 0, 600);
+    if (rarity === 'legendary') { [392, 523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.3, i % 2 ? 'square' : 'triangle', 0.18, 0.2 + i * 0.08)); noise(0.6, 0.08, 0.8, 5000); return; }
     const notes = rarity === 'epic' ? [523, 659, 784, 1047, 1319, 1568] : rarity === 'rare' ? [523, 659, 784, 1047] : [523, 784];
     notes.forEach((f, i) => tone(f, 0.26, 'triangle', 0.22, 0.2 + i * 0.09));
   }),
