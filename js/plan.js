@@ -132,7 +132,11 @@ export function examPlan(asms, ctx) {
 
 /** the whole plan grouped by day: [{ day, items, exams: finals/reminders that day }] */
 export function examPlanDays(asms, ctx) {
-  const days = [...new Set(asms.filter(a => a.kind === 'prep' && a.is_active !== false).map(a => a.date_start))].sort();
+  const prepDays = asms.filter(a => a.kind === 'prep' && a.is_active !== false).map(a => a.date_start);
+  if (!prepDays.length) return [];
   const extra = asms.filter(a => ['final', 'reminder'].includes(a.kind) && a.is_active !== false);
+  const first = prepDays.reduce((m, d) => d < m ? d : m);
+  // exam days with no practice left (e.g. the last exam) still get a row, from the first plan day on
+  const days = [...new Set([...prepDays, ...extra.filter(e => e.kind === 'final' && e.date_start >= first).map(e => e.date_start)])].sort();
   return days.map(day => ({ day, items: examPlan(asms, { ...ctx, day }), exams: extra.filter(e => e.date_start === day) }));
 }
