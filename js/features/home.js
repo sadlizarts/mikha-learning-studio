@@ -1,9 +1,9 @@
 // Home (DESIGN §5.2): greeting, streak + level tiles, Continue card, CTA, recent battles.
 import { $, esc, setMascot, FLAME, prettyDay, shortDay, jakartaDate, fmtNum, levelInfo, scoreCls, sheet, toast, shortCode } from '../ui.js';
 import { loadProgress, progressOf, abandonStale, inProgressAttempt, completedAttempts, signOut, changePassword, abandonAttempt, myGoals, loadAssessments, myLessonReads, loadDojo } from '../store.js';
-import { studyPlan } from '../plan.js';
+import { studyPlan, examPlan } from '../plan.js';
 import { lessonsMeta } from './learn.js';
-import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS } from '../schedule.js';
+import { upcoming, assessmentRow, phase, dateRange, KIND, LOOKAHEAD_DAYS, daysUntil, onCalendar } from '../schedule.js';
 import { goalStatus } from '../goals.js';
 import { app, catalog, chapterIndex, firstName, viewerId } from '../state.js';
 import { show, navigate } from '../router.js';
@@ -77,8 +77,8 @@ export async function renderHome() {
 
   const soon = upcoming(asms || []);
   const urgent = soon.some(a => ['now', 'soon'].includes(phase(a, today)));
-  const nextOne = (asms || []).find(a => a.date_start > today && !soon.includes(a));
-  const comingUp = (asms || []).length ? `<div class="panel upnext ${urgent ? 'alert' : ''}">
+  const nextOne = (asms || []).filter(onCalendar).find(a => a.date_start > today && !soon.includes(a));
+  const comingUp = (asms || []).some(onCalendar) ? `<div class="panel upnext ${urgent ? 'alert' : ''}">
       <div class="row between" style="margin-bottom:4px"><div class="eyebrow">${urgent ? 'Heads up · assessment soon' : `Coming up · next ${LOOKAHEAD_DAYS} days`}</div><button class="btn ghost xs" data-nav="#/schedule">Calendar</button></div>
       ${soon.length ? `<div class="asm-list">${soon.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today, readonly: viewing })).join('')}</div>`
         : `<p class="note" style="font-size:14px">No assessments in the next ${LOOKAHEAD_DAYS} days.${nextOne ? ` Next: <b>${esc(nextOne.subject_name)}</b> · ${esc((KIND[nextOne.kind] || {}).label || '')} · ${esc(dateRange(nextOne))}.` : ''}</p>`}
@@ -86,7 +86,24 @@ export async function renderHome() {
 
   const plan = studyPlan(asms || [], { cat, idx, attempts: done, reads, lessons, today });
   const planDone = plan.filter(p => p.done).length;
-  const planCard = plan.length ? `<div class="panel plan">
+  // Final exam plan (v3.6.0): Dad's day-by-day tasks before the semester finals
+  const ex = examPlan(asms || [], { cat, idx, attempts: done, reads, lessons, day: today });
+  const finalsAhead = (asms || []).filter(a => a.kind === 'final' && a.date_start >= today).sort((x, y) => x.date_start.localeCompare(y.date_start) || (x.time_start || '').localeCompare(y.time_start || ''));
+  const firstFinal = finalsAhead[0];
+  const exDone = ex.filter(p => p.done).length;
+  const exCard = ex.length ? `<div class="panel plan exam">
+      <div class="row between" style="margin-bottom:4px"><div class="eyebrow">Final exam plan · today</div><span class="note num">${exDone}/${ex.length} done</span></div>
+      ${firstFinal ? `<p class="note" style="margin:0 0 4px">First exam <b>${esc(daysUntil(firstFinal.date_start, today) === 0 ? 'today' : daysUntil(firstFinal.date_start, today) === 1 ? 'tomorrow' : `in ${daysUntil(firstFinal.date_start, today)} days`)}</b> · ${esc(dateRange(firstFinal))}</p>` : ''}
+      ${ex.map(p => `<div class="item">
+        <div class="hday num" style="--c:${p.color}" title="Days until this subject's exam">${p.daysLeft == null ? '•' : `H-${p.daysLeft}`}</div>
+        <div class="grow"><div class="pt">${esc(p.title)}</div><div class="note">${esc(p.detail)}${p.note ? ` · ${esc(p.note)}` : ''}</div></div>
+        ${p.done ? '<span class="chip" style="--c:var(--ok)"><span class="dot"></span>Done</span>'
+          : viewing || !p.action ? '<span class="chip" style="--c:var(--volt-2)"><span class="dot"></span>To do</span>'
+          : `<button class="btn small primary" data-nav="${p.action.hash}">${esc(p.action.label)}</button>`}
+      </div>`).join('')}
+      <button class="btn ghost xs" data-nav="#/schedule" style="margin-top:6px">Whole plan</button>
+    </div>` : '';
+  const planCard = exCard + (plan.length ? `<div class="panel plan">
       <div class="row between" style="margin-bottom:4px"><div class="eyebrow">Study plan · today</div><span class="note num">${planDone}/${plan.length} done</span></div>
       ${plan.map(p => `<div class="item">
         <div class="hday num">H-${p.daysLeft}</div>
@@ -95,7 +112,7 @@ export async function renderHome() {
           : viewing || !p.action ? '<span class="chip" style="--c:var(--volt-2)"><span class="dot"></span>To do</span>'
           : `<button class="btn small primary" data-nav="${p.action.hash}">${esc(p.action.label)}</button>`}
       </div>`).join('')}
-    </div>` : '';
+    </div>` : '');
 
   // Dad's view: a practice untouched for stale_hours (24) counts as left behind (Sadli, 21 Oct 2026); it closes when Mikha next opens the app.
   const staleMs = (+(cat.rules || {}).stale_hours || 24) * 3600000;
