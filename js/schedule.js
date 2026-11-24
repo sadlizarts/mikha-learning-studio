@@ -5,7 +5,16 @@ export const KIND = {
   teacher_paced: { label: 'Common Assessment', sub: 'Teacher-paced', cls: 'tp', practice: true },
   synchronized: { label: 'Common Assessment', sub: 'Synchronized · all subjects', cls: 'sy', practice: true },
   growth: { label: 'EASE Growth', sub: 'Benchmark test', cls: 'eg', practice: false },
+  final: { label: 'Final Exam', sub: 'Semester final exam', cls: 'fx', practice: true },
+  reminder: { label: 'Reminder', sub: 'At school', cls: 'rm', practice: false },
+  prep: { label: 'Study plan', sub: 'Exam plan task', cls: 'pp', practice: true, plan: true },   // daily task of the final-exam plan (not shown on the calendar)
 };
+/** rows that belong on the calendar (plan tasks live in the exam plan instead) */
+export const onCalendar = (a) => a.kind !== 'prep';
+/** "08:30–10:00" (school times, WIB) or '' */
+export const timeTxt = (a) => a.time_start ? `${a.time_start}${a.time_end ? '–' + a.time_end : ''}` : '';
+/** subject chip for rows that may have no subject (school reminders) */
+export const metaOf = (a) => a.subject_name ? subjectMeta({ name: a.subject_name }) : { key: 'none', short: 'School', color: 'var(--ink-2)' };
 export const LOOKAHEAD_DAYS = 14;   // Home "Coming up" window
 export const HEADSUP_DAYS = 3;      // banner style when the window starts this soon
 
@@ -40,8 +49,8 @@ export function dateRange(a) {
 export const monthLabel = (iso) => fmt(iso, { month: 'long', year: 'numeric' });
 
 export function upcoming(list, days = LOOKAHEAD_DAYS, today = jakartaDate()) {
-  return list.filter(a => a.is_active !== false && a.date_end >= today && daysUntil(a.date_start, today) <= days)
-    .sort((x, y) => x.date_start.localeCompare(y.date_start) || x.subject_name.localeCompare(y.subject_name));
+  return list.filter(a => onCalendar(a) && a.is_active !== false && a.date_end >= today && daysUntil(a.date_start, today) <= days)
+    .sort((x, y) => x.date_start.localeCompare(y.date_start) || (x.time_start || '').localeCompare(y.time_start || '') || x.subject_name.localeCompare(y.subject_name));
 }
 
 /** Readiness from the chapters Dad linked: average recent accuracy (null when nothing practised yet). */
@@ -65,20 +74,22 @@ export function planWindow(a) {
 /** One assessment row (Home card + Schedule screen). */
 export function assessmentRow(a, { idx = {}, statBy = {}, today = jakartaDate(), compact = false, readonly = false } = {}) {
   const k = KIND[a.kind] || KIND.teacher_paced;
-  const m = subjectMeta({ name: a.subject_name });
+  const m = metaOf(a);
   const p = phase(a, today);
+  const tt = timeTxt(a);
   const chapters = (a.chapter_ids || []).map(id => idx[id]).filter(Boolean);
   const chapLine = chapters.length ? chapters.map(c => `${String(c.code).split('-').pop()} ${c.name}`).join(' · ') : (k.practice ? 'Chapters not set yet' : '');
   const r = k.practice ? readiness(a, statBy) : null;
   const meter = r ? `<div class="ready" title="Average of the last 30 answers in these chapters"><i style="--p:${r.pct}%" class="${r.pct >= 80 ? 'ok' : r.pct >= 65 ? 'mid' : 'low'}"></i></div><div class="note num">Ready ${r.pct}% · ${r.practised}/${r.total} chapters practised</div>` : '';
   const btn = !readonly && k.practice && p !== 'past' ? `<button class="btn small ${p === 'now' || p === 'soon' ? 'primary' : ''}" data-nav="${practiceHash(a)}">Practice</button>` : '';
   return `<div class="asm ${k.cls} ${p}" style="--c:${m.color}">
-    <div class="when"><b class="num">${esc(countdown(a, today))}</b><span>${esc(dateRange(a))}</span></div>
+    <div class="when"><b class="num">${esc(countdown(a, today))}</b><span>${esc(dateRange(a))}</span>${tt ? `<span class="num">${esc(tt)}</span>` : ''}</div>
     <div class="grow">
       <div class="t"><span class="sub">${esc(m.short)}</span> ${esc(a.title || k.label)}</div>
       <div class="note">${esc(k.sub)}${chapLine && !compact ? ` · ${esc(chapLine)}` : ''}</div>
       ${a.notes && !compact ? `<div class="note">${esc(a.notes)}</div>` : ''}
-      ${k.practice && (p === 'next' || p === 'soon') ? `<div class="note planline">Study plan H-5 → H-1: ${esc(planWindow(a))}</div>` : ''}
+      ${a.kind === 'final' && p !== 'past' ? '<div class="note planline">Daily plan: see “Final exam plan” on Home</div>'
+        : k.practice && (p === 'next' || p === 'soon') ? `<div class="note planline">Study plan H-5 → H-1: ${esc(planWindow(a))}</div>` : ''}
       ${meter}
     </div>
     ${btn}

@@ -602,7 +602,7 @@ export async function revengeCount() { return run(sb.rpc('revenge_count')); }
 export async function myQuests() { return run(sb.rpc('my_quests')); }
 export async function claimQuest(slot) { return run(sb.rpc('claim_quest', { p_slot: slot })); }
 export async function loadAssessments({ all = false } = {}) {
-  let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, subjects(name)').order('date_start').order('subject_id');
+  let q = sb.from('assessments').select('id, subject_id, kind, title, date_start, date_end, semester, week, chapter_ids, notes, is_active, time_start, time_end, task, questions, subjects(name)').order('date_start').order('subject_id');
   if (!all) q = q.eq('is_active', true);
   const rows = await run(q);
   return rows.map(r => ({ ...r, subject_name: r.subjects?.name || '', chapter_ids: r.chapter_ids || [] }));

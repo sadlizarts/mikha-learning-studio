@@ -4,7 +4,7 @@
 //   H-1:           dress rehearsal — one 50-question practice
 // Status is computed from what Mikha actually did today, so nothing is stored.
 import { jakartaDate } from './ui.js';
-import { KIND, daysUntil, practiceHash } from './schedule.js';
+import { KIND, daysUntil, practiceHash, metaOf } from './schedule.js';
 
 export const PLAN_DAYS = 5;
 
@@ -26,7 +26,8 @@ export function studyPlan(asms, { cat, idx, attempts = [], reads = {}, lessons =
   const out = [];
   const todays = attempts.filter(t => jakartaDate(t.finished_at) === today);
   for (const a of asms) {
-    if (!(KIND[a.kind] || {}).practice || a.is_active === false) continue;
+    // only Common Assessments get the automatic H-5 plan; final exams use the hand-made exam plan (kind 'prep')
+    if (!['teacher_paced', 'synchronized'].includes(a.kind) || a.is_active === false) continue;
     const d = daysUntil(a.date_start, today);
     if (d < 1 || d > PLAN_DAYS) continue;
     const ids = targetChapters(a, cat);
@@ -69,4 +70,69 @@ export function planDays(a) {
     const dt = new Date(start - (PLAN_DAYS - i) * 86400000);
     return { day: `H-${PLAN_DAYS - i}`, date: dt.toISOString().slice(0, 10), step: s };
   });
+}
+
+/* ---------------- Final exam plan (v3.6.0) ----------------
+ * Dad's day-by-day plan before the semester final exams is stored as assessments rows of kind 'prep'
+ * (one row per task: date, subject, chapters, task = practice | rehearsal | read | light, questions).
+ * Chapter choice is live: "practice" opens the 2 weakest exam chapters of the moment (never practised first),
+ * "rehearsal" opens all exam chapters (50), "read" opens the weakest chapter that has a lesson.
+ * Done = a completed practice that day on those chapters with ≥ the planned number of questions, or a lesson read that day. */
+
+/** exam chapters, weakest first (never practised → 0 %) */
+export function weakestFirst(ids, statBy) {
+  return [...ids].sort((x, y) => {
+    const a = statBy[x], b = statBy[y];
+    const ax = a?.answered ? a.accuracy_recent : -1, bx = b?.answered ? b.accuracy_recent : -1;
+    return ax - bx;
+  });
+}
+const accTxt = (id, statBy) => statBy[id]?.answered ? `${statBy[id].accuracy_recent}%` : 'new';
+const codeOf = (id, idx) => String(idx[id]?.code || '').split('-').pop();
+
+/** one plan task → display item for a given day */
+export function planTask(a, { cat, idx, attempts = [], reads = {}, lessons = {}, finals = [], day }) {
+  const ids = (a.chapter_ids || []).filter(id => idx[id]);
+  const short = metaOf(a).short;
+  const n = a.questions || (a.task === 'rehearsal' ? 50 : 30);
+  const set = new Set(ids);
+  const dayAttempts = attempts.filter(t => jakartaDate(t.finished_at) === day && (t.chapter_ids || []).some(c => set.has(c)));
+  const fin = finals.find(f => f.subject_id === a.subject_id && f.date_start >= day);
+  const daysLeft = fin ? daysUntil(fin.date_start, day) : null;
+  const base = { id: a.id, asm: a, task: a.task || 'practice', subject: short, color: metaOf(a).color, daysLeft, note: a.notes || '' };
+  if (a.task === 'read') {
+    const order = weakestFirst(ids, cat.statBy);
+    const pickId = order.find(id => lessons[id]) || order[0];
+    const done = ids.some(id => reads[id]?.last_read_at && jakartaDate(reads[id].last_read_at) >= day);
+    return { ...base, title: `${short} · Read again: ${pickId ? `${codeOf(pickId, idx)} ${idx[pickId]?.name || ''}` : 'weakest chapter'}`,
+      detail: pickId ? `Weakest exam chapter now (${accTxt(pickId, cat.statBy)}) · Boss Intel / lesson` : '', done,
+      action: pickId ? (lessons[pickId] ? { label: 'Read', hash: `#/lesson/${pickId}` } : { label: 'Practice', hash: `#/pick/${pickId}~30` }) : null };
+  }
+  const avail = ids.reduce((t, id) => t + (cat.chapters.find(c => c.chapter_id === id)?.distinct_items || 0), 0);
+  const need = Math.min(n, avail || n);
+  const done = dayAttempts.some(t => t.total_questions >= need);
+  if (a.task === 'rehearsal') {
+    return { ...base, title: `${short} · Dress rehearsal ${need}`, detail: `All exam chapters: ${ids.map(id => codeOf(id, idx)).join(' · ')}`, done,
+      action: { label: 'Start', hash: `#/pick/${ids.join(',')}~${need === 50 ? 50 : 30}` } };
+  }
+  const weak = weakestFirst(ids, cat.statBy).slice(0, ids.length > 2 ? 2 : ids.length);
+  return { ...base, title: `${short} · Practice ${need}${a.task === 'light' ? ' (light day)' : ''}`,
+    detail: `Weakest now: ${weak.map(id => `${codeOf(id, idx)} ${accTxt(id, cat.statBy)}`).join(' · ')}`, done,
+    action: { label: 'Practice', hash: `#/pick/${weak.join(',')}~30` } };
+}
+
+/** all plan tasks for one day (default today) */
+export function examPlan(asms, ctx) {
+  const day = ctx.day || jakartaDate();
+  const finals = asms.filter(a => a.kind === 'final' && a.is_active !== false);
+  return asms.filter(a => a.kind === 'prep' && a.is_active !== false && a.date_start === day)
+    .sort((x, y) => (x.week || 0) - (y.week || 0) || (x.subject_name || '').localeCompare(y.subject_name || ''))   // prep rows: week = slot order within the day
+    .map(a => planTask(a, { ...ctx, finals, day }));
+}
+
+/** the whole plan grouped by day: [{ day, items, exams: finals/reminders that day }] */
+export function examPlanDays(asms, ctx) {
+  const days = [...new Set(asms.filter(a => a.kind === 'prep' && a.is_active !== false).map(a => a.date_start))].sort();
+  const extra = asms.filter(a => ['final', 'reminder'].includes(a.kind) && a.is_active !== false);
+  return days.map(day => ({ day, items: examPlan(asms, { ...ctx, day }), exams: extra.filter(e => e.date_start === day) }));
 }
