@@ -41,6 +41,7 @@ export async function renderSchedule() {
     [list, cat, attempts, reads, lessons] = await Promise.all([loadAssessments(), catalog(), completedAttempts(vid, 200).catch(() => []),
       myLessonReads(vid), lessonsMeta().catch(() => ({}))]);
   } catch (e) { body.innerHTML = `<div class="panel sunk empty">${esc(e.message)}</div>`; return; }
+  list = [...list].sort((x, y) => x.date_start.localeCompare(y.date_start) || (x.time_start || '').localeCompare(y.time_start || '') || (x.subject_name || '').localeCompare(y.subject_name || ''));   // same day: earliest time first
   const idx = chapterIndex(cat), today = jakartaDate();
   const days = examPlanDays(list, { cat, idx, attempts, reads, lessons });
   const cal = list.filter(onCalendar);
