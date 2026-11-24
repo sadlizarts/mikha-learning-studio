@@ -171,6 +171,8 @@ export async function renderOverview(body) {
     <div class="ad-gl"><span>Boss tersegel</span><span class="num">${d.beatNow} / ${d.bosses.length}</span></div><div class="ad-bar"><i style="width:${Math.round(100 * d.beatNow / Math.max(1, d.bosses.length))}%;background:${ST.good}"></i></div>
     <div class="ad-gl"><span>Level ${lv.level} → ${lv.level + 1}</span><span class="num">${fmtNum(lv.toNext)} XP lagi</span></div><div class="ad-bar"><i style="width:${lv.pct}%;background:#3987e5"></i></div></div>`;
 
-  body.innerHTML = `<div class="ad-stack">${attentionCard(attentionItems(o))}${kpis}${raporCard(o)}${activity}${scoreCard}${mastery}${map}${exams}${game}
+  // v3.7.0: desktop = two columns (rapor, mastery, map | activity, scores, exams, game); phones keep the old single-column order
+  const od = (html, n) => html ? `<div class="ad-o" style="order:${n}">${html}</div>` : '';
+  body.innerHTML = `<div class="ad-stack ad-wide">${attentionCard(attentionItems(o))}${kpis}<div class="ad-cols"><div class="ad-col">${od(raporCard(o), 1)}${od(mastery, 4)}${od(map, 5)}</div><div class="ad-col">${od(activity, 2)}${od(scoreCard, 3)}${od(exams, 6)}${od(game, 7)}</div></div>
     <p class="ad-note" style="text-align:center">Data ${esc(app.viewAs.name)} · ${esc(HARI.format(new Date()))} · sentuh grafik untuk detail</p></div>`;
 }
