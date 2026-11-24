@@ -107,6 +107,7 @@ export async function renderProgress() {
   const strongCard = strong.length ? `<div class="nd-card"><div class="row between" style="margin-bottom:6px"><div class="nd-h2" style="font-size:18px">Strong</div><span class="nd-label" style="color:var(--nd-ok)">${STRONG}%+ · few hints</span></div>
       ${strong.map(r => `<div class="pg-esc strong"><div class="pg-thumb">${thumb(r.chapter_id, 44)}</div><div class="grow"><b>${label(r)}</b><div class="nd-sub" style="font-size:12px">${esc(r.ch.name)}</div></div><span class="pg-pct num" style="color:var(--nd-ok)">${r.accuracy_recent}%</span></div>`).join('')}</div>` : '';
 
-  body.innerHTML = `<div class="nd-stack pg">${power}${report}${trend}${escaped}${seals}${strongCard}${allCard}</div>`;
+  // v3.7.0: desktop = two columns (report | trend & monsters); phones keep the single column in the old order
+  body.innerHTML = `<div class="nd-stack pg">${power}<div class="pg-cols"><div class="pg-col">${report}${allCard}</div><div class="pg-col">${trend}${escaped}${seals}${strongCard}</div></div></div>`;
   body.dataset.ready = '1';
 }

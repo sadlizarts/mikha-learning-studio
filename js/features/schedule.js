@@ -54,14 +54,17 @@ export async function renderSchedule() {
     groups.get(key).push(a);
   }
   const hasFinal = cal.some(a => a.kind === 'final'), hasRem = cal.some(a => a.kind === 'reminder');
-  body.innerHTML = `<div class="stack">
-    ${planPanel(days, today)}
+  const pp = planPanel(days, today);
+  // v3.7.0: on desktop the plan sits left (sticky) and the calendar right; on phones they stack as before
+  body.innerHTML = `<div class="${pp ? 'schgrid' : 'stack'}">
+    ${pp ? `<div class="sch-plan">${pp}</div><div class="stack sch-cal">` : ''}
     <div class="legend"><span class="tp">Common Assessment · Teacher-paced</span><span class="sy">Common Assessment · Synchronized</span><span class="eg">EASE Growth</span>${hasFinal ? `<span class="fx">${esc(KIND.final.label)}</span>` : ''}${hasRem ? '<span class="rm">Reminder</span>' : ''}</div>
     ${past.length ? `<button class="btn ghost small" id="pastbtn">${showPast ? 'Hide' : 'Show'} ${past.length} finished</button>` : ''}
     ${[...groups].map(([k, rows]) => `<div class="stack" style="gap:8px"><h3 class="month">${esc(monthLabel(k + '-01'))}</h3>
       <div class="panel asm-list">${rows.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today })).join('')}</div></div>`).join('')
       || '<div class="panel sunk empty">No assessments on the calendar.</div>'}
     <p class="note" style="text-align:center">From the school's EASE schedule 2026–2027 · Grade 7</p>
+    ${pp ? '</div>' : ''}
   </div>`;
   const pb = $('#pastbtn');
   if (pb) pb.onclick = () => { showPast = !showPast; renderSchedule(); };

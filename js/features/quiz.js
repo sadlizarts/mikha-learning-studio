@@ -293,6 +293,9 @@ function renderQ() {
   $('#opts').innerHTML = order.map((orig, pos) =>
     `<button class="opt" data-orig="${orig}"><span class="k" aria-hidden="true">${'ABCD'[pos]}</span><span class="grow">${rich(q.options[orig])}</span></button>`).join('');
 
+  // v3.7.0: short answers sit 2×2 on desktop; any long answer keeps the single column
+  $('#opts').classList.toggle('grid2', order.length === 4 && order.every(o => String(q.options[o] ?? '').length <= 60));
+
   $('#hints').innerHTML = '';
   const hints = (q.hints || []).filter(Boolean);
   const hb = $('#hintbtn');

@@ -80,7 +80,7 @@ export async function renderHome() {
   const nextOne = (asms || []).filter(onCalendar).find(a => a.date_start > today && !soon.includes(a));
   const comingUp = (asms || []).some(onCalendar) ? `<div class="panel upnext ${urgent ? 'alert' : ''}">
       <div class="row between" style="margin-bottom:4px"><div class="eyebrow">${urgent ? 'Heads up · assessment soon' : `Coming up · next ${LOOKAHEAD_DAYS} days`}</div><button class="btn ghost xs" data-nav="#/schedule">Calendar</button></div>
-      ${soon.length ? `<div class="asm-list">${soon.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today, readonly: viewing })).join('')}</div>`
+      ${soon.length ? `<div class="asm-list">${soon.map(a => assessmentRow(a, { idx, statBy: cat.statBy, today, readonly: viewing, compact: true })).join('')}</div>`
         : `<p class="note" style="font-size:14px">No assessments in the next ${LOOKAHEAD_DAYS} days.${nextOne ? ` Next: <b>${esc(nextOne.subject_name)}</b> · ${esc((KIND[nextOne.kind] || {}).label || '')} · ${esc(dateRange(nextOne))}.` : ''}</p>`}
     </div>` : '';
 
@@ -195,7 +195,7 @@ export async function renderHome() {
     ${rtCard}
     <div class="hgrid">
     <div class="hmain">
-    ${hi(resumeNd, 1)}${viewing ? '' : '<div class="hitem" style="order:2" id="questslot"></div>'}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(towerNd, 5)}${hi(planCard, 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
+    ${hi(resumeNd, 1)}${viewing ? '' : '<div class="hitem" style="order:2" id="questslot"></div>'}${hi(ctaNd, 2)}${hi(bossCard, 3)}${hi(examOpen, 4)}${hi(towerNd, 5)}${hi(planCard, ex.length ? 1 : 6)}${hi(mission, 7)}${hi(worlds, 8)}${hi(startCta, 9)}
     <div class="hitem" style="order:10">
       <div class="nd-sec"><div class="nd-h2">Recent battles</div>${done.length ? '<button class="nd-link" data-nav="#/history">All ›</button>' : ''}</div>
       <div class="recent">${done.length ? done.slice(0, 3).map(a => recRow(a, idx)).join('') :
