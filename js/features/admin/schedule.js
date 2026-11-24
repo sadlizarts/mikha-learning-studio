@@ -11,7 +11,8 @@ export async function renderSchedule(body) {
   body.innerHTML = '<div class="spin"></div>';
   const [list, cat] = await Promise.all([loadAssessments({ all: true }), catalog()]);
   const today = jakartaDate();
-  const rows = list.filter(a => onCalendar(a) && (showPast || phase(a, today) !== 'past'));
+  const rows = list.filter(a => onCalendar(a) && (showPast || phase(a, today) !== 'past'))
+    .sort((x, y) => x.date_start.localeCompare(y.date_start) || (x.time_start || '').localeCompare(y.time_start || '') || (x.subject_name || '').localeCompare(y.subject_name || ''));
   const prep = list.filter(a => a.kind === 'prep').sort((x, y) => x.date_start.localeCompare(y.date_start) || (x.week || 0) - (y.week || 0));
   const TASK = { practice: 'Practice', rehearsal: 'Rehearsal', read: 'Read', light: 'Light' };
   const chName = (id) => { const c = cat.chapters.find(x => x.chapter_id === id); return c ? shortCode(c.code) : '?'; };
@@ -21,17 +22,17 @@ export async function renderSchedule(body) {
       <p class="note" style="margin:4px 0 8px">Pick the chapters each assessment covers. Mikha sees the next 14 days on Home, with a Practice button for those chapters.</p>
       <table class="tbl"><thead><tr><th>When</th><th>Assessment</th><th>Chapters</th><th></th></tr></thead><tbody>
       ${rows.map(a => { const k = KIND[a.kind] || KIND.teacher_paced; const m = metaOf(a);
-        return `<tr class="${a.is_active ? '' : 'off'}"><td><b>${esc(countdown(a, today))}</b><div class="note">${esc(dateRange(a))}${timeTxt(a) ? ' · ' + esc(timeTxt(a)) : ''} · S${a.semester ?? '-'} W${a.week ?? '-'}</div></td>
-          <td><span class="tag" style="border-color:${m.color};color:${m.color}">${esc(m.short)}</span> ${esc(a.title || k.label)}<div class="note">${esc(k.sub)}${a.notes ? ' · ' + esc(a.notes) : ''}</div></td>
-          <td>${(a.chapter_ids || []).map(id => `<span class="tag">${esc(chName(id))}</span>`).join('') || (k.practice ? '<span class="tag warn">not set</span>' : '<span class="tag mute">n/a</span>')}</td>
+        return `<tr class="${a.is_active ? '' : 'off'}"><td><b>${esc(countdown(a, today))}</b><div class="note">${esc(dateRange(a))}${timeTxt(a) ? ' · ' + esc(timeTxt(a)) : ''} · S${a.semester ?? '-'}${a.week != null ? ' W' + a.week : ''}</div></td>
+          <td class="wrap"><span class="tag" style="border-color:${m.color};color:${m.color}">${esc(m.short)}</span> ${esc(a.title || k.label)}<div class="note">${esc(k.sub)}${a.notes ? ' · ' + esc(a.notes) : ''}</div></td>
+          <td class="chips">${(a.chapter_ids || []).map(id => `<span class="tag">${esc(chName(id))}</span>`).join('') || (k.practice ? '<span class="tag warn">not set</span>' : '<span class="tag mute">n/a</span>')}</td>
           <td class="r"><button class="btn small" data-edit="${a.id}">Edit</button></td></tr>`; }).join('')}
       </tbody></table></div>
     ${prep.length ? `<div class="panel"><div class="row between"><h3>Rencana UAS (tugas harian Mikha)</h3><span class="note num">${prep.length} tugas</span></div>
       <p class="note" style="margin:4px 0 8px">Satu baris = satu tugas di Home pada tanggal itu. Practice membuka 2 bab terlemah saat itu; Rehearsal semua bab ujian (50 soal); Read bab terlemah yang punya lesson. Edit untuk ganti tanggal/bab, atau sembunyikan.</p>
       <table class="tbl"><thead><tr><th>Tanggal</th><th>Tugas</th><th>Bab</th><th></th></tr></thead><tbody>
       ${prep.map(a => { const m = metaOf(a); return `<tr class="${a.is_active ? '' : 'off'} ${a.date_start < today ? 'past' : ''}"><td><b>${esc(dateRange(a))}</b></td>
-        <td><span class="tag" style="border-color:${m.color};color:${m.color}">${esc(m.short)}</span> ${esc(TASK[a.task] || a.task || '')} ${a.questions ? esc(String(a.questions)) : ''}${a.notes ? `<div class="note">${esc(a.notes)}</div>` : ''}</td>
-        <td>${(a.chapter_ids || []).map(id => `<span class="tag">${esc(chName(id))}</span>`).join('')}</td>
+        <td class="wrap"><span class="tag" style="border-color:${m.color};color:${m.color}">${esc(m.short)}</span> ${esc(TASK[a.task] || a.task || '')} ${a.questions ? esc(String(a.questions)) : ''}${a.notes ? `<div class="note">${esc(a.notes)}</div>` : ''}</td>
+        <td class="chips">${(a.chapter_ids || []).map(id => `<span class="tag">${esc(chName(id))}</span>`).join('')}</td>
         <td class="r"><button class="btn small" data-edit="${a.id}">Edit</button></td></tr>`; }).join('')}
       </tbody></table></div>` : ''}
     <div class="panel" id="s-editor" hidden></div>
