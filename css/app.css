@@ -1570,3 +1570,12 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
   .ad-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
   .ad-col{display:flex;flex-direction:column;gap:12px;min-width:0}
 }
+/* Home desktop: during the finals the exam plan is the first card (overrides the older .hitem order reset) */
+@media (min-width:1024px){.hmain > .hitem:has(> .plan.exam){order:-1!important}}
+/* page titles line up with the wider desktop content (content width + 2×40 px padding) */
+@media (min-width:1024px){#s-schedule .top{max-width:1320px}#s-admin .top{max-width:1280px}}
+@media (min-width:1024px){
+  #s-admin .aseg{max-width:1200px;width:calc(100% - 80px);margin:4px auto 0;box-sizing:border-box}
+  #s-admin .asub{padding-left:max(40px,calc((100% - 1200px) / 2));padding-right:max(40px,calc((100% - 1200px) / 2))}
+}
+@media (min-width:1024px){#admin-body,#schedule-body{scrollbar-gutter:stable both-edges}}
