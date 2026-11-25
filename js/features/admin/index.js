@@ -15,13 +15,14 @@ import { renderDojoAdmin } from './dojo.js';
 import { renderHeroStudio } from './hero.js';
 import { renderOverview } from './overview.js';
 import { renderContent } from './content.js';
+import { renderPrint } from './print.js';
 
-const TABS = { overview: renderOverview, content: renderContent, import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, subjects: renderSubjects, dojo: renderDojoAdmin, hero: renderHeroStudio, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
+const TABS = { overview: renderOverview, print: renderPrint, content: renderContent, import: renderImport, questions: renderQuestions, lessons: renderLessons, review: renderReview, student: renderStudent, subjects: renderSubjects, dojo: renderDojoAdmin, hero: renderHeroStudio, goals: renderGoals, schedule: renderSchedule, viewer: renderViewer };
 
 // v2.7.0: three groups instead of 11 flat tabs (labels in Bahasa Indonesia; admin is Dad's)
 const GROUPS = [
   { key: 'mikha', label: 'Mikha', tabs: [['overview', 'Ringkasan'], ['dojo', 'Dojo'], ['goals', 'Target'], ['schedule', 'Jadwal'], ['student', 'Detail']] },
-  { key: 'content', label: 'Konten', tabs: [['content', 'Ringkasan'], ['import', 'Impor'], ['review', 'Perlu dicek'], ['questions', 'Bank soal'], ['lessons', 'Materi'], ['subjects', 'Mapel & bab'], ['viewer', 'Lihat soal']] },
+  { key: 'content', label: 'Konten', tabs: [['content', 'Ringkasan'], ['import', 'Impor'], ['review', 'Perlu dicek'], ['questions', 'Bank soal'], ['lessons', 'Materi'], ['subjects', 'Mapel & bab'], ['viewer', 'Lihat soal'], ['print', 'Cetak PDF']] },
   { key: 'studio', label: 'Studio', tabs: [['hero', 'Hero studio']] },
 ];
 
