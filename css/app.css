@@ -1579,3 +1579,45 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
   #s-admin .asub{padding-left:max(40px,calc((100% - 1200px) / 2));padding-right:max(40px,calc((100% - 1200px) / 2))}
 }
 @media (min-width:1024px){#admin-body,#schedule-body{scrollbar-gutter:stable both-edges}}
+
+/* ---------- v3.8.0 Admin › Cetak PDF ---------- */
+.pr-wrap{max-width:1240px;margin:0 auto}
+.pr-chs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;margin-top:6px}
+.pr-ch{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:12px;cursor:pointer;color:var(--ink);font-size:14px;line-height:1.3}
+.pr-ch:has(input:checked){border-color:var(--volt);background:rgba(255,210,90,.08)}
+.pr-ch input{margin-top:2px;flex:none}
+.pr-ch small{color:var(--ink-3);font-weight:800;margin-left:4px}
+@media (min-width:1024px){.pr-wrap{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:16px;align-items:start}.pr-form{position:sticky;top:0}.pr-chs{grid-template-columns:1fr}}
+/* the sheet itself: always black on white, on screen (preview) and on paper */
+.pdoc{color:#111;font-family:Georgia,'Times New Roman',serif;font-size:14.5px;line-height:1.45}
+.psheet{background:#fff;color:#111;padding:28px 32px;border-radius:10px;margin-bottom:14px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid #111;padding-bottom:6px}
+.ph-t{font:800 20px/1.2 Arial,Helvetica,sans-serif}
+.ph-s{font:400 12px/1.35 Arial,Helvetica,sans-serif;color:#444;margin-top:2px}
+.ph-brand{font:700 11px/1 Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#666;white-space:nowrap}
+.ph-meta{display:flex;flex-wrap:wrap;gap:6px 26px;font:400 13px/1.4 Arial,Helvetica,sans-serif;margin:10px 0 4px}
+.ph-how{font:italic 13px/1.4 Georgia,serif;color:#333;margin:4px 0 12px}
+.pq,.pk-row{display:flex;gap:8px;margin:0 0 14px;break-inside:avoid;page-break-inside:avoid}
+.pq-n{flex:none;width:28px;font-weight:700;text-align:right}
+.pq-b{flex:1;min-width:0}
+.pq-stem{white-space:pre-line;overflow-wrap:anywhere}
+.pq-img{display:block;max-width:min(100%,420px);max-height:260px;margin:8px 0;border:1px solid #bbb;border-radius:6px;background:#fff}
+.pq-noimg{font-size:12px;color:#a00;margin:6px 0}
+.pq-opts{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:3px}
+.pq-opts li{display:flex;gap:8px}.pq-opts li>span{flex:none;width:20px;font-weight:700}.pq-opts li>div{overflow-wrap:anywhere}
+.pq-ctx{border:1px solid #999;border-left:4px solid #111;padding:8px 12px;margin:0 0 12px;white-space:pre-line;font-size:13.5px;break-inside:avoid}
+.pq-ctx b{display:block;font:700 11px/1.4 Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px 10px;margin-top:10px;font:400 14px/1.5 Arial,sans-serif}
+.pk-row{margin-bottom:9px;font-size:13.5px}
+.pdoc .ar{font-family:'Amiri Quran','Amiri',serif;font-size:1.25em}
+#printroot{display:none}
+@media print{
+  @page{size:A4;margin:14mm 13mm}
+  html,body{height:auto!important;overflow:visible!important;background:#fff!important;zoom:1!important}
+  body > *:not(#printroot){display:none!important}
+  #printroot{display:block!important}
+  #printroot .psheet{box-shadow:none;border-radius:0;padding:0;margin:0}
+  #printroot .pkey{break-before:page;page-break-before:always}
+  #printroot .pdoc{font-size:11.5pt}
+  #printroot *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
