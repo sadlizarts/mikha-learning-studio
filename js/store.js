@@ -417,6 +417,19 @@ export const admin = {
     if (res.error) throw toAppError(res.error);
     return { rows: res.data, count: res.count };
   },
+  /** v3.8.0 print sheets: every active (non quick-check) question of the chosen chapters, paged past the 1000-row limit */
+  async printQuestions(chapterIds, difficulty = 'all') {
+    const out = [];
+    for (let from = 0; ; from += 1000) {
+      let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, context, context_id, image_path, difficulty, lock_options')
+        .in('chapter_id', chapterIds).eq('is_active', true).eq('is_quick_check', false);
+      if (difficulty && difficulty !== 'all') q = q.eq('difficulty', difficulty);
+      const rows = await run(q.order('id', { ascending: true }).range(from, from + 999));
+      out.push(...rows);
+      if (rows.length < 1000) break;
+    }
+    return out;
+  },
   async questionStats(ids) {
     if (!ids.length) return {};
     const rows = await run(sb.from('v_question_stats').select('question_id, times_answered, times_wrong, wrong_rate, times_hinted, choice_dist').in('question_id', ids));
