@@ -1621,3 +1621,16 @@ details.rp-row{display:block}details.rp-row>summary{list-style:none;cursor:point
   #printroot .pdoc{font-size:11.5pt}
   #printroot *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+/* v3.9.0 Cetak PDF: exam-practice mode */
+.pr-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:12px;background:rgba(255,255,255,.05);margin-bottom:12px}
+.pr-seg button{padding:8px 6px;border-radius:9px;font-weight:800;font-size:13.5px;color:var(--ink-3);background:none;border:0;cursor:pointer}
+.pr-seg button.on{background:#2A2350;color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.ex-title{font-weight:900;color:var(--ink);font-size:16px}
+.ex-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.ex-stats>div{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:12px;border:1px solid var(--line);text-align:center}
+.ex-stats b{font-size:18px;color:var(--ink);line-height:1.1}.ex-stats span{font-size:11px;color:var(--ink-3);font-weight:800}
+.ex-kisi{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+.ex-kisi summary{cursor:pointer;font-weight:800;color:var(--ink);font-size:14px}
+.ex-kisi ol{margin:8px 0 0;padding-left:22px;font-size:13px;color:var(--ink-2);max-height:320px;overflow:auto}
+.ex-kisi li{padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.ex-kisi li small{display:block;color:var(--ink-3);font-weight:700}
