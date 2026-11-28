@@ -79,6 +79,7 @@ async function load(chapterId) {
 }
 
 export async function renderIntel(chapterId, mode) {
+  if (!/^[0-9a-f-]{36}$/i.test(chapterId || '')) { navigate('#/bosses', { replace: true }); return; }   // v3.8.1: no chapter in the link → boss list, not a raw database error
   show('intel');
   const body = $('#intel-body');
   body.innerHTML = '<div class="loading" style="height:40vh"><div class="spin"></div></div>';
