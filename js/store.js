@@ -421,7 +421,7 @@ export const admin = {
   async printQuestions(chapterIds, difficulty = 'all') {
     const out = [];
     for (let from = 0; ; from += 1000) {
-      let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, context, context_id, image_path, difficulty, lock_options')
+      let q = sb.from('questions').select('id, chapter_id, stem, options, answer_key, explanation, context, context_id, image_path, difficulty, lock_options, skill')
         .in('chapter_id', chapterIds).eq('is_active', true).eq('is_quick_check', false);
       if (difficulty && difficulty !== 'all') q = q.eq('difficulty', difficulty);
       const rows = await run(q.order('id', { ascending: true }).range(from, from + 999));
@@ -429,6 +429,17 @@ export const admin = {
       if (rows.length < 1000) break;
     }
     return out;
+  },
+  /** v3.9.0 exam practice: school blueprints (kisi-kisi) and the sets already printed from them */
+  async blueprints() {
+    return run(sb.from('exam_blueprints').select('id, subject_id, chapter_id, title, exam_date, total, items').eq('is_active', true).order('exam_date', { ascending: true }));
+  },
+  async examPrints(blueprintId) {
+    return run(sb.from('exam_prints').select('id, question_ids, created_at').eq('blueprint_id', blueprintId).order('created_at', { ascending: true }));
+  },
+  async addExamPrint(blueprintId, questionIds) {
+    const rows = await run(sb.from('exam_prints').insert({ blueprint_id: blueprintId, question_ids: questionIds }).select('id'));
+    return rows[0]?.id || null;
   },
   async questionStats(ids) {
     if (!ids.length) return {};
